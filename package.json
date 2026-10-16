@@ -1,0 +1,35 @@
+{
+  "name": "juma-ops",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,json,md,yml,yaml}\"",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:generate": "pnpm --filter @juma/api db:generate",
+    "db:migrate": "pnpm --filter @juma/api db:migrate",
+    "db:seed": "pnpm --filter @juma/shared build && pnpm --filter @juma/api db:seed",
+    "db:reset": "pnpm --filter @juma/api db:reset",
+    "db:studio": "pnpm --filter @juma/api db:studio"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.4.2",
+    "prettier-plugin-tailwindcss": "^0.6.9",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.1"
+  }
+}

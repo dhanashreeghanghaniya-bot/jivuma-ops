@@ -1,0 +1,13 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# pnpm blocks dependency lifecycle scripts unless the package is listed here.
+# `allowBuilds` is the pnpm 12 name; older pnpm called it `onlyBuiltDependencies`.
+allowBuilds:
+  "@prisma/client": true
+  "@prisma/engines": true
+  "esbuild": true
+  "prisma": true
+  "sharp": true
+  "unrs-resolver": true

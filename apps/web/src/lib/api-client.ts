@@ -1,0 +1,182 @@
+import type { ApiError, ApiMeta, ApiResponse, AuthUser, LoginResponse } from '@juma/shared';
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
+
+/**
+ * The access token lives in memory only. The long-lived refresh token is an
+ * httpOnly cookie the browser never exposes to JavaScript.
+ */
+let accessToken: string | null = null;
+let refreshInFlight: Promise<string | null> | null = null;
+const sessionLostHandlers = new Set<() => void>();
+
+export const setAccessToken = (token: string | null) => {
+  accessToken = token;
+};
+export const getAccessToken = () => accessToken;
+
+export function onSessionLost(handler: () => void) {
+  sessionLostHandlers.add(handler);
+  return () => {
+    sessionLostHandlers.delete(handler);
+  };
+}
+
+export class ApiRequestError extends Error {
+  readonly status: number;
+  readonly code: string;
+  readonly fieldErrors: Record<string, string>;
+
+  constructor(status: number, error: ApiError | null) {
+    super(error?.message ?? 'Something went wrong');
+    this.name = 'ApiRequestError';
+    this.status = status;
+    this.code = error?.code ?? 'INTERNAL_ERROR';
+    this.fieldErrors = Object.fromEntries(
+      (error?.details ?? []).map((d) => [d.path, d.message]),
+    );
+  }
+}
+
+export interface RequestOptions extends Omit<RequestInit, 'body'> {
+  body?: unknown;
+  /** Query params; `undefined` and `''` values are dropped. */
+  query?: Record<string, string | number | boolean | undefined | null>;
+  /** Skips the automatic refresh-and-retry (used by the auth calls themselves). */
+  skipAuthRetry?: boolean;
+}
+
+function buildUrl(path: string, query?: RequestOptions['query']): string {
+  const url = new URL(`${BASE_URL}${path}`);
+  for (const [key, value] of Object.entries(query ?? {})) {
+    if (value === undefined || value === null || value === '') continue;
+    url.searchParams.set(key, String(value));
+  }
+  return url.toString();
+}
+
+async function rawRequest<T>(
+  path: string,
+  options: RequestOptions,
+): Promise<{ data: T; meta: ApiMeta | null }> {
+  const { body, query, skipAuthRetry: _skip, headers, ...rest } = options;
+
+  const response = await fetch(buildUrl(path, query), {
+    ...rest,
+    // Always send the refresh cookie; it is scoped to /api/v1/auth server-side.
+    credentials: 'include',
+    headers: {
+      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      ...headers,
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+
+  let payload: ApiResponse<T> | null = null;
+  try {
+    payload = (await response.json()) as ApiResponse<T>;
+  } catch {
+    // Non-JSON response (proxy error page, network interception, ...).
+  }
+
+  if (!response.ok) throw new ApiRequestError(response.status, payload?.error ?? null);
+
+  return { data: payload?.data as T, meta: payload?.meta ?? null };
+}
+
+/** Collapses concurrent 401s into a single refresh call. */
+async function refreshAccessToken(): Promise<string | null> {
+  refreshInFlight ??= (async () => {
+    try {
+      const { data } = await rawRequest<LoginResponse>('/auth/refresh', {
+        method: 'POST',
+        skipAuthRetry: true,
+      });
+      setAccessToken(data.accessToken);
+      return data.accessToken;
+    } catch {
+      setAccessToken(null);
+      return null;
+    } finally {
+      // Cleared on the next tick so callers queued behind this one reuse the result.
+      setTimeout(() => {
+        refreshInFlight = null;
+      }, 0);
+    }
+  })();
+
+  return refreshInFlight;
+}
+
+export async function apiRequest<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<{ data: T; meta: ApiMeta | null }> {
+  try {
+    return await rawRequest<T>(path, options);
+  } catch (err) {
+    const isAuthFailure =
+      err instanceof ApiRequestError &&
+      err.status === 401 &&
+      !options.skipAuthRetry &&
+      path !== '/auth/refresh';
+
+    if (!isAuthFailure) throw err;
+
+    const token = await refreshAccessToken();
+    if (!token) {
+      sessionLostHandlers.forEach((handler) => handler());
+      throw err;
+    }
+
+    return rawRequest<T>(path, { ...options, skipAuthRetry: true });
+  }
+}
+
+export const api = {
+  get: <T>(path: string, options?: RequestOptions) =>
+    apiRequest<T>(path, { ...options, method: 'GET' }),
+  post: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+    apiRequest<T>(path, { ...options, method: 'POST', body }),
+  patch: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+    apiRequest<T>(path, { ...options, method: 'PATCH', body }),
+  delete: <T>(path: string, options?: RequestOptions) =>
+    apiRequest<T>(path, { ...options, method: 'DELETE' }),
+};
+
+// --- auth calls -------------------------------------------------------------
+
+export async function loginRequest(phone: string, password: string): Promise<LoginResponse> {
+  const { data } = await apiRequest<LoginResponse>('/auth/login', {
+    method: 'POST',
+    body: { phone, password },
+    skipAuthRetry: true,
+  });
+  setAccessToken(data.accessToken);
+  return data;
+}
+
+export async function bootstrapSession(): Promise<LoginResponse | null> {
+  try {
+    const { data } = await apiRequest<LoginResponse>('/auth/refresh', {
+      method: 'POST',
+      skipAuthRetry: true,
+    });
+    setAccessToken(data.accessToken);
+    return data;
+  } catch {
+    setAccessToken(null);
+    return null;
+  }
+}
+
+export async function logoutRequest(): Promise<void> {
+  try {
+    await apiRequest('/auth/logout', { method: 'POST', skipAuthRetry: true });
+  } finally {
+    setAccessToken(null);
+  }
+}
+
+export const fetchMe = () => api.get<AuthUser & { hqTown: unknown }>('/me');
