@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { Role } from '@juma/shared';
+import { Role, idSchema } from '@juma/shared';
 import { prisma } from '../../lib/prisma';
 import { sendOk } from '../../lib/http';
 import { requireAuth, requireRole } from '../../middleware/auth';
@@ -10,7 +10,7 @@ export const geoRouter = Router();
 
 const listTownsQuerySchema = z.object({
   search: z.string().trim().max(120).optional(),
-  districtId: z.string().cuid().optional(),
+  districtId: idSchema.optional(),
   limit: z.coerce.number().int().min(1).max(500).default(200),
 });
 
