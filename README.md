@@ -23,22 +23,50 @@ packages/shared Enums, Zod schemas and Gujarat district constants shared by both
 
 ```bash
 pnpm install
-docker compose up -d          # Postgres 16 on host port 55432
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
+# point DATABASE_URL / DIRECT_URL at a database (see below)
 pnpm db:migrate
 pnpm db:seed
 pnpm dev                      # API on :4000, web on :3000
 ```
 
-Generate real secrets for `JWT_SECRET` and `JWT_REFRESH_SECRET` before deploying anywhere;
-the committed example values are placeholders.
+Generate real secrets for `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` before deploying
+anywhere; the committed example values are placeholders.
 
-### Postgres runs on 55432, not 5432
+## Database
 
-Host port 5432 is frequently already taken (a WSL-hosted Postgres claims loopback through
-the WSL port relay, which silently shadows Docker's binding). The container therefore
-publishes **55432**. Connecting to 5432 will appear to work and then fail password
+The Prisma datasource takes two URLs, which is the split Supabase expects:
+
+- `DATABASE_URL` — pooled connection, used by the running API
+- `DIRECT_URL` — direct connection, used by `prisma migrate` and `prisma db seed`
+
+### Supabase
+
+Take both strings from **Project settings → Database → Connection string** and keep the
+pooler flags, which Prisma needs because PgBouncer runs in transaction mode and does not
+support prepared statements:
+
+```ini
+DATABASE_URL="postgresql://postgres.<ref>:<password>@aws-0-ap-south-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
+DIRECT_URL="postgresql://postgres.<ref>:<password>@aws-0-ap-south-1.pooler.supabase.com:5432/postgres"
+```
+
+Nothing else changes, and Docker is not needed at all in this mode.
+
+Data access goes through the Express API only — no Supabase Auth, no Row Level Security,
+and no Supabase JS client in the browser. The service-role key belongs in the API's env and
+must never reach the frontend.
+
+### Local Docker (optional)
+
+```bash
+docker compose up -d          # Postgres 16 on host port 55432
+```
+
+The container publishes **55432**, not 5432: host port 5432 is frequently already taken by
+a WSL-hosted Postgres that claims loopback through the WSL port relay and silently shadows
+Docker's binding. Connecting to 5432 appears to work and then fails password
 authentication against someone else's database.
 
 ### Behind a TLS-intercepting proxy
