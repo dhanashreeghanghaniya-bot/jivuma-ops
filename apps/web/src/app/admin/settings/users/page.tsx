@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { KeyRound, MoreHorizontal, Power, PowerOff, Search } from 'lucide-react';
+import { KeyRound, Loader2, MoreHorizontal, Power, PowerOff, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Role, type UserListItem } from '@juma/shared';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +34,7 @@ import { ApiRequestError } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { formatDate, formatPhone } from '@/lib/format';
 import { useT } from '@/lib/i18n';
+import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { useSetUserActive, useUsers, type UsersFilters } from '@/features/users/api';
 import { CreateUserDialog } from '@/features/users/create-user-dialog';
 import { ResetPasswordDialog } from '@/features/users/reset-password-dialog';
@@ -48,12 +49,13 @@ export default function UsersSettingsPage() {
   const [page, setPage] = useState(1);
   const [resetTarget, setResetTarget] = useState<UserListItem | null>(null);
 
+  const debouncedSearch = useDebouncedValue(search);
   const filters = useMemo<UsersFilters>(
-    () => ({ page, search: search.trim() || undefined, role, isActive }),
-    [page, search, role, isActive],
+    () => ({ page, search: debouncedSearch.trim() || undefined, role, isActive }),
+    [page, debouncedSearch, role, isActive],
   );
 
-  const { data, isPending, isError, error, refetch } = useUsers(filters);
+  const { data, isPending, isFetching, isError, error, refetch } = useUsers(filters);
   const setUserActive = useSetUserActive();
 
   const users = data?.items ?? [];
@@ -93,6 +95,10 @@ export default function UsersSettingsPage() {
               placeholder={t('users.search')}
               className="pl-9"
             />
+            {/* Results lag the keystrokes by the debounce, so say so. */}
+            {isFetching && !isPending ? (
+              <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+            ) : null}
           </div>
 
           <Select value={role} onValueChange={resetToFirstPage(setRole) as (v: string) => void}>

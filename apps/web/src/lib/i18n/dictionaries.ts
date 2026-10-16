@@ -31,6 +31,8 @@ export const dictionaries = {
     'nav.today': 'Today',
     'nav.visits': 'Visits',
     'nav.profile': 'Profile',
+    'nav.openMenu': 'Open menu',
+    'nav.closeMenu': 'Close menu',
 
     'users.title': 'Users',
     'users.subtitle': 'Create salesmen, reset passwords and deactivate accounts.',

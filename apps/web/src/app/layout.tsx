@@ -10,7 +10,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
+  // Pinch-zoom stays available; inputs are 16px on mobile so focusing one does
+  // not trigger iOS auto-zoom.
+  maximumScale: 5,
   themeColor: '#1a6b4f',
 };
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -43,10 +43,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isActive = (href: string) =>
     href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
 
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setNavOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [navOpen]);
+
   return (
     <RequireRole roles={[Role.ADMIN, Role.MANAGER]}>
       <div className="flex min-h-screen bg-muted/30">
+        {navOpen ? (
+          <div
+            className="fixed inset-0 z-30 bg-foreground/40 lg:hidden"
+            onClick={() => setNavOpen(false)}
+            aria-hidden
+          />
+        ) : null}
+
         <aside
+          id="admin-nav"
           className={cn(
             'fixed inset-y-0 left-0 z-40 w-64 flex-col border-r bg-background transition-transform lg:static lg:flex lg:translate-x-0',
             navOpen ? 'flex translate-x-0' : 'hidden -translate-x-full',
@@ -94,7 +112,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex items-center gap-3 border-b bg-background px-4 py-3 lg:hidden">
-            <Button variant="ghost" size="icon" onClick={() => setNavOpen((open) => !open)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={navOpen ? t('nav.closeMenu') : t('nav.openMenu')}
+              aria-expanded={navOpen}
+              aria-controls="admin-nav"
+              onClick={() => setNavOpen((open) => !open)}
+            >
               <Menu className="h-5 w-5" />
             </Button>
             <span className="font-semibold">{t('app.name')}</span>
