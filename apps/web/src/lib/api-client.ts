@@ -40,6 +40,11 @@ export class ApiRequestError extends Error {
 
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown;
+  /**
+   * Sent verbatim instead of `body`, for endpoints that take something other
+   * than JSON (the bulk importer posts raw CSV). Set `Content-Type` yourself.
+   */
+  rawBody?: string;
   /** Query params; `undefined` and `''` values are dropped. */
   query?: Record<string, string | number | boolean | undefined | null>;
   /** Skips the automatic refresh-and-retry (used by the auth calls themselves). */
@@ -59,7 +64,7 @@ async function rawRequest<T>(
   path: string,
   options: RequestOptions,
 ): Promise<{ data: T; meta: ApiMeta | null }> {
-  const { body, query, skipAuthRetry: _skip, headers, ...rest } = options;
+  const { body, rawBody, query, skipAuthRetry: _skip, headers, ...rest } = options;
 
   const response = await fetch(buildUrl(path, query), {
     ...rest,
@@ -70,7 +75,11 @@ async function rawRequest<T>(
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...headers,
     },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    ...(rawBody !== undefined
+      ? { body: rawBody }
+      : body === undefined
+        ? {}
+        : { body: JSON.stringify(body) }),
   });
 
   let payload: ApiResponse<T> | null = null;

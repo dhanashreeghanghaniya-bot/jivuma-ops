@@ -13,6 +13,8 @@ export interface TownOption {
   id: string;
   name: string;
   type: string;
+  lat: number;
+  lng: number;
   district: { id: string; name: string; code: string };
 }
 
@@ -40,7 +42,7 @@ export function useUsers(filters: UsersFilters) {
 export function useTowns() {
   return useQuery({
     queryKey: ['towns'],
-    queryFn: async () => (await api.get<TownOption[]>('/geo/towns')).data ?? [],
+    queryFn: async () => (await api.get<TownOption[]>('/geo/towns/options')).data ?? [],
     staleTime: 10 * 60 * 1000,
   });
 }

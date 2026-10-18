@@ -200,6 +200,8 @@ export interface RetailerSeed {
   distributorKey: string;
   category: RetailerCategory;
   isVerified: boolean;
+  /** Set on unverified shops: they are the ones a salesman added in the field. */
+  addedBySalesmanKey?: 'salesman1' | 'salesman2';
 }
 
 export const RETAILERS: RetailerSeed[] = [
@@ -208,13 +210,13 @@ export const RETAILERS: RetailerSeed[] = [
   { key: 'RT_RJT_2', shopName: 'Big Bazaar Super', ownerName: 'Pankaj Shah', phone: '+919822000102', address: 'Kalawad Road, Rajkot', townKey: 'RJT_RAJKOT', distributorKey: 'DS_RJT', category: RetailerCategory.SUPERMARKET, isVerified: true },
   { key: 'RT_RJT_3', shopName: 'Gondal Provision', ownerName: 'Hitesh Bhatt', phone: '+919822000103', address: 'Main Bazaar, Gondal', townKey: 'RJT_GONDAL', distributorKey: 'DS_RJT', category: RetailerCategory.KIRANA, isVerified: true },
   { key: 'RT_RJT_4', shopName: 'Jetpur General Stores', ownerName: 'Rajesh Kansara', phone: '+919822000104', address: 'Derdi Road, Jetpur', townKey: 'RJT_JETPUR', distributorKey: 'DS_RJT', category: RetailerCategory.GENERAL, isVerified: true },
-  { key: 'RT_RJT_5', shopName: 'Hotel Rasoi', ownerName: 'Vipul Trivedi', phone: '+919822000105', address: 'Dhoraji Main Road', townKey: 'RJT_DHORAJI', distributorKey: 'DS_RJT', category: RetailerCategory.HORECA, isVerified: false },
+  { key: 'RT_RJT_5', shopName: 'Hotel Rasoi', ownerName: 'Vipul Trivedi', phone: '+919822000105', address: 'Dhoraji Main Road', townKey: 'RJT_DHORAJI', distributorKey: 'DS_RJT', category: RetailerCategory.HORECA, isVerified: false, addedBySalesmanKey: 'salesman1' },
 
   // Junagadh
   { key: 'RT_JNG_1', shopName: 'Girnar Kirana', ownerName: 'Sanjay Pandya', phone: '+919822000201', address: 'Talav Gate, Junagadh', townKey: 'JNG_JUNAGADH', distributorKey: 'DS_JNG', category: RetailerCategory.KIRANA, isVerified: true },
   { key: 'RT_JNG_2', shopName: 'Mahadev Super Market', ownerName: 'Paresh Kotecha', phone: '+919822000202', address: 'MG Road, Junagadh', townKey: 'JNG_JUNAGADH', distributorKey: 'DS_JNG', category: RetailerCategory.SUPERMARKET, isVerified: true },
   { key: 'RT_JNG_3', shopName: 'Keshod Provision Store', ownerName: 'Alpesh Vora', phone: '+919822000203', address: 'Bus Stand Road, Keshod', townKey: 'JNG_KESHOD', distributorKey: 'DS_JNG', category: RetailerCategory.KIRANA, isVerified: true },
-  { key: 'RT_JNG_4', shopName: 'Manavadar General', ownerName: 'Chirag Nakum', phone: '+919822000204', address: 'Market Yard, Manavadar', townKey: 'JNG_MANAVADAR', distributorKey: 'DS_JNG', category: RetailerCategory.GENERAL, isVerified: false },
+  { key: 'RT_JNG_4', shopName: 'Manavadar General', ownerName: 'Chirag Nakum', phone: '+919822000204', address: 'Market Yard, Manavadar', townKey: 'JNG_MANAVADAR', distributorKey: 'DS_JNG', category: RetailerCategory.GENERAL, isVerified: false, addedBySalesmanKey: 'salesman2' },
 
   // Jamnagar
   { key: 'RT_JMN_1', shopName: 'Halar Kirana Bhandar', ownerName: 'Mitesh Gandhi', phone: '+919822000301', address: 'Bedi Gate, Jamnagar', townKey: 'JMN_JAMNAGAR', distributorKey: 'DS_JMN', category: RetailerCategory.KIRANA, isVerified: true },

@@ -276,6 +276,7 @@ async function seedPartners() {
       distributorId: sid('distributor', r.distributorKey),
       category: r.category,
       isVerified: r.isVerified,
+      addedBySalesmanId: r.addedBySalesmanKey ? sid('user', r.addedBySalesmanKey) : null,
     };
 
     await prisma.retailer.upsert({
@@ -289,6 +290,7 @@ async function seedPartners() {
         address: base.address,
         category: base.category,
         isVerified: base.isVerified,
+        addedBySalesmanId: base.addedBySalesmanId,
       },
     });
   }
@@ -520,6 +522,8 @@ async function seedFieldHistory(policy: {
   const products = await prisma.product.findMany({ where: { id: { startsWith: 'seed_product_' } } });
 
   const today = dateOnly(new Date());
+  // Highest sequence used per `YYMM`, so Phase 5 allocates real order numbers
+  // above everything the seed wrote.
   const orderSeq = new Map<string, number>();
   let odometer = 18_400;
 
@@ -697,9 +701,12 @@ async function seedFieldHistory(policy: {
 
         if (!tookOrder) continue;
 
+        // Derived from the order's own identity rather than a running counter, so
+        // re-seeding never renumbers (and collides with) an existing order.
+        const seq =
+          day.getUTCDate() * 100 + (plan.salesmanKey === 'salesman1' ? 0 : 50) + index;
         const monthKey = `${String(day.getUTCFullYear()).slice(2)}${String(day.getUTCMonth() + 1).padStart(2, '0')}`;
-        const seq = (orderSeq.get(monthKey) ?? 0) + 1;
-        orderSeq.set(monthKey, seq);
+        orderSeq.set(monthKey, Math.max(orderSeq.get(monthKey) ?? 0, seq));
 
         const orderId = sid('order', `${plan.salesmanKey}_${dayKey}_${index}`);
         const lineProducts = products.slice(0, randomInt(rand, 2, 4));
@@ -866,7 +873,8 @@ async function seedCompanyOrders() {
         fromPartyType: PartyType.COMPANY,
         toPartyType: PartyType.SUPER_STOCKIST,
         superStockistId: sid('ss', ss.key),
-        orderNumber: orderNumber(orderDate, 900 + index),
+        // 9000+ keeps company orders clear of the field range (max 3155 above).
+        orderNumber: orderNumber(orderDate, 9000 + index),
         status: OrderStatus.DELIVERED,
         totalAmount: round2(items.reduce((sum, i) => sum + i.amount, 0)),
         orderDate,

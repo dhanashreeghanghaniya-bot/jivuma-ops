@@ -1,51 +1,81 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { Role, idSchema } from '@juma/shared';
+import {
+  Role,
+  createTownSchema,
+  idSchema,
+  listDistrictsQuerySchema,
+  listTownsQuerySchema,
+  updateDistrictSchema,
+  updateTownSchema,
+} from '@juma/shared';
 import { prisma } from '../../lib/prisma';
 import { sendOk } from '../../lib/http';
-import { requireAuth, requireRole } from '../../middleware/auth';
-import { query, validateQuery } from '../../middleware/validate';
+import { requireAdmin, requireAuth, requireRole } from '../../middleware/auth';
+import { query, validateBody, validateQuery } from '../../middleware/validate';
+import * as controller from './geo.controller';
 
 export const geoRouter = Router();
 
-const listTownsQuerySchema = z.object({
-  search: z.string().trim().max(120).optional(),
-  districtId: idSchema.optional(),
-  limit: z.coerce.number().int().min(1).max(500).default(200),
-});
+// Everything here is read-only for salesmen and writable only by admins.
+geoRouter.use(requireAuth);
+
+const readRoles = requireRole(Role.ADMIN, Role.MANAGER);
+
+geoRouter.get('/districts', readRoles, validateQuery(listDistrictsQuerySchema), controller.listDistricts);
+geoRouter.get(
+  '/districts/map',
+  readRoles,
+  validateQuery(listDistrictsQuerySchema),
+  controller.districtsMap,
+);
+geoRouter.get('/districts/:id/summary', readRoles, controller.districtSummary);
+geoRouter.patch(
+  '/districts/:id',
+  requireAdmin,
+  validateBody(updateDistrictSchema),
+  controller.updateDistrict,
+);
+
+geoRouter.get('/markers', readRoles, controller.mapMarkers);
+
+geoRouter.get('/towns', validateQuery(listTownsQuerySchema), controller.listTowns);
+geoRouter.post('/towns', requireAdmin, validateBody(createTownSchema), controller.createTown);
+geoRouter.patch('/towns/:id', requireAdmin, validateBody(updateTownSchema), controller.updateTown);
+geoRouter.delete('/towns/:id', requireAdmin, controller.deleteTown);
 
 /**
- * Read-only town lookup, enough to power the HQ-town picker in Settings -> Users.
- * Full geography CRUD arrives in Phase 2.
+ * Flat town lookup for pickers. Separate from the paginated list so forms can
+ * fetch every town in one call and filter client-side.
  */
-geoRouter.get(
-  '/towns',
-  requireAuth,
-  requireRole(Role.ADMIN, Role.MANAGER),
-  validateQuery(listTownsQuerySchema),
-  async (req, res, next) => {
-    try {
-      const { search, districtId, limit } = query(req, listTownsQuerySchema);
+const townOptionsQuerySchema = z.object({
+  districtId: idSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(2000).default(1000),
+});
 
-      const towns = await prisma.town.findMany({
-        where: {
-          deletedAt: null,
-          ...(districtId ? { districtId } : {}),
-          ...(search ? { name: { contains: search, mode: 'insensitive' } } : {}),
-        },
-        select: {
-          id: true,
-          name: true,
-          type: true,
-          district: { select: { id: true, name: true, code: true } },
-        },
-        orderBy: [{ district: { name: 'asc' } }, { name: 'asc' }],
-        take: limit,
-      });
+geoRouter.get('/towns/options', validateQuery(townOptionsQuerySchema), async (req, res, next) => {
+  try {
+    const { districtId, limit } = query(req, townOptionsQuerySchema);
+    const towns = await prisma.town.findMany({
+      where: { deletedAt: null, ...(districtId ? { districtId } : {}) },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        lat: true,
+        lng: true,
+        district: { select: { id: true, name: true, code: true } },
+      },
+      orderBy: [{ district: { name: 'asc' } }, { name: 'asc' }],
+      take: limit,
+    });
 
-      return sendOk(res, towns);
-    } catch (err) {
-      next(err);
-    }
-  },
-);
+    // Coordinates let a form centre its map picker on the chosen town.
+    return sendOk(
+      res,
+      towns.map((town) => ({ ...town, lat: town.lat.toNumber(), lng: town.lng.toNumber() })),
+    );
+  } catch (err) {
+    next(err);
+  }
+});

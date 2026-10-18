@@ -81,6 +81,42 @@ $env:NODE_EXTRA_CA_CERTS = "C:\dev\juma-ops\.certs\windows-ca-bundle.pem"
 `.certs/` is gitignored because the bundle is machine-specific. The web build itself needs
 no network access — fonts are system fonts by design.
 
+## Google Maps
+
+The admin dashboard renders the Gujarat coverage map with the Maps JavaScript API. Set
+both values in `apps/web/.env.local`:
+
+```
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=...
+NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID=...
+```
+
+In Google Cloud:
+
+1. Enable **Maps JavaScript API** and **Places API (New)**.
+2. Create a **browser key**, restricted by HTTP referrer (`localhost:3000` plus the
+   production domain) and to those two APIs only.
+3. Create a **Map ID** (vector or raster) — Advanced Markers require one.
+4. Set a **billing budget alert** so a runaway key cannot cost real money.
+
+The key is public by design and is only ever used from the browser; the server never calls
+Google APIs with it.
+
+### District boundaries
+
+The choropleth needs a Gujarat district boundary file at
+`apps/web/public/geo/gujarat-districts.geojson`, where each feature carries a `code`
+property matching the district codes in the database (`RJT`, `JMN`, …).
+
+Both pieces degrade gracefully, so the dashboard is never a dead screen:
+
+| Missing | What you get |
+| --- | --- |
+| API key | A clickable district grid coloured by coverage; the side panel, KPIs and filters all still work |
+| GeoJSON only | The live map with one coloured circle per district instead of filled boundaries |
+
+Either way an explanatory banner appears under the map saying which file or key to add.
+
 ## Commands
 
 | Command | What it does |

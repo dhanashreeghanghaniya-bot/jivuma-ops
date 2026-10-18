@@ -14,6 +14,15 @@ export const phoneSchema = z
   })
   .transform((v) => (v.startsWith('+91') ? v : `+91${v}`));
 
+/**
+ * For optional phone fields. A cleared form input arrives as `''`, which means
+ * "not provided" rather than "invalid", so it maps to null like email and GSTIN.
+ */
+export const optionalPhoneSchema = z
+  .union([z.literal(''), phoneSchema])
+  .transform((v) => v || null)
+  .nullish();
+
 export const passwordSchema = z
   .string()
   .min(8, 'Password must be at least 8 characters')
