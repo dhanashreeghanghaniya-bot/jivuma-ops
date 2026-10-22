@@ -117,6 +117,8 @@ function useInvalidateDay() {
   return () => {
     void qc.invalidateQueries({ queryKey: fieldKeys.current });
     void qc.invalidateQueries({ queryKey: ['field', 'visits'] });
+    // End Day drafts TA/DA; Submit moves the claims along with the day.
+    void qc.invalidateQueries({ queryKey: ['expenses'] });
   };
 }
 

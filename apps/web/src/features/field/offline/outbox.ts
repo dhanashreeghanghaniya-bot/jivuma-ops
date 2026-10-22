@@ -2,6 +2,8 @@
 
 import { useSyncExternalStore } from 'react';
 import type {
+  CreateExpenseInput,
+  ExpenseItem,
   CreateVisitInput,
   FieldLeadInput,
   PingInput,
@@ -32,6 +34,12 @@ export interface QueuedPhoto {
   path?: string;
 }
 
+export interface QueuedBill {
+  key: string;
+  blob: Blob;
+  path?: string;
+}
+
 interface Base {
   id: string;
   createdAt: string;
@@ -55,6 +63,15 @@ export type OutboxItem =
       photosBlocked?: boolean;
     })
   | (Base & { kind: 'lead'; payload: FieldLeadInput; summary: { name: string; townName: string } })
+  | (Base & {
+      kind: 'expense';
+      payload: CreateExpenseInput;
+      /** Bill photos; uploaded once the claim exists, like visit photos. */
+      photos: QueuedBill[];
+      /** Server id once the claim itself is stored. */
+      expenseId?: string;
+      photosBlocked?: boolean;
+    })
   | (Base & { kind: 'ping'; payload: PingInput & { workDayId: string } });
 
 /** `Omit` that keeps the union apart, so each kind keeps its own fields. */
@@ -159,14 +176,15 @@ async function save(item: OutboxItem) {
   await putOutbox(item.id, item);
 }
 
-async function uploadPhotos(item: Extract<OutboxItem, { kind: 'visit' }>) {
+async function uploadPhotos(
+  item: Extract<OutboxItem, { kind: 'visit' | 'expense' }>,
+  kind: 'visits' | 'bills',
+) {
   for (const photo of item.photos) {
     if (photo.path) continue;
     let signed: PresignedUpload;
     try {
-      signed = (
-        await api.post<PresignedUpload>('/uploads/presign', { kind: 'visits', key: photo.key })
-      ).data;
+      signed = (await api.post<PresignedUpload>('/uploads/presign', { kind, key: photo.key })).data;
     } catch (err) {
       if (err instanceof ApiRequestError && err.status === 503) {
         item.photosBlocked = true;
@@ -193,6 +211,29 @@ async function uploadPhotos(item: Extract<OutboxItem, { kind: 'visit' }>) {
   return true;
 }
 
+/**
+ * A claim, then its bills, then (for a claim not tied to a day) its
+ * submission. Claims tied to a day are submitted with the day.
+ */
+async function sendExpense(item: Extract<OutboxItem, { kind: 'expense' }>) {
+  if (!item.expenseId) {
+    const { data } = await api.post<ExpenseItem>('/expenses', item.payload);
+    deliveredThisRun = true;
+    item.expenseId = data.id;
+    item.error = undefined;
+    await save(item);
+  }
+  if (item.photos.length > 0) {
+    const uploaded = await uploadPhotos(item, 'bills');
+    if (!uploaded) return false;
+    await api.post(`/expenses/${item.expenseId}/bills`, {
+      paths: item.photos.map((p) => p.path),
+    });
+  }
+  if (!item.payload.workDayId) await api.post(`/expenses/${item.expenseId}/submit`);
+  return true;
+}
+
 async function sendVisit(item: Extract<OutboxItem, { kind: 'visit' }>) {
   if (!item.visitId) {
     const { data } = await api.post<VisitListItem>('/visits', item.payload);
@@ -203,7 +244,7 @@ async function sendVisit(item: Extract<OutboxItem, { kind: 'visit' }>) {
   }
   if (item.photos.length === 0) return true;
 
-  const uploaded = await uploadPhotos(item);
+  const uploaded = await uploadPhotos(item, 'visits');
   if (!uploaded) return false;
   await api.post(`/visits/${item.visitId}/photos`, {
     photos: item.photos.map((p) => ({
@@ -259,6 +300,7 @@ async function runOnce(): Promise<void> {
   for (const item of items) {
     if (item.dead || item.kind === 'ping') continue;
     if (item.kind === 'visit') await handle(item, () => sendVisit(item));
+    else if (item.kind === 'expense') await handle(item, () => sendExpense(item));
     else await handle(item, () => api.post('/field/leads', item.payload).then(() => true));
   }
 

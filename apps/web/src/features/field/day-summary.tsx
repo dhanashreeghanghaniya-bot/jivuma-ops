@@ -1,12 +1,14 @@
 'use client';
 
-import { Loader2, Lock, Send } from 'lucide-react';
+import Link from 'next/link';
+import { Loader2, Lock, Plus, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import type { WorkDaySummary } from '@juma/shared';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ApiRequestError } from '@/lib/api-client';
 import { formatINR, formatTime } from '@/lib/format';
+import { MyExpenseList, useMyExpenses } from '@/features/expenses/mine';
 import { useSubmitDay } from './api';
 import { DAY_TYPE_LABELS, formatMinutes } from './labels';
 
@@ -25,6 +27,10 @@ export function Stat({ label, value }: { label: string; value: string }) {
 export function DaySummaryCard({ day }: { day: WorkDaySummary }) {
   const submitDay = useSubmitDay();
   const submitted = day.status !== 'OPEN';
+  const expenses = useMyExpenses({ workDayId: day.id });
+  // Claims still on the phone would miss the submission; wait for them.
+  const unsynced = expenses.rows.filter((r) => r.pending).length;
+  const claimed = expenses.rows.reduce((sum, r) => sum + Number(r.amountClaimed), 0);
 
   const submit = async () => {
     try {
@@ -56,9 +62,31 @@ export function DaySummaryCard({ day }: { day: WorkDaySummary }) {
           <Stat label="Km (used)" value={day.totalKm ?? '-'} />
           <Stat label="Km (GPS)" value={day.gpsKm ?? '-'} />
         </div>
-        <p className="text-muted-foreground text-xs">
-          TA/DA will be drafted from this day automatically once expenses are switched on.
-        </p>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">Expenses</p>
+            <p className="text-sm tabular-nums">{formatINR(claimed, true)}</p>
+          </div>
+          {expenses.rows.length === 0 && !expenses.isPending ? (
+            <p className="text-muted-foreground text-xs">
+              No TA/DA for this day under the policy. Add any fares, lodging or food below.
+            </p>
+          ) : null}
+          <MyExpenseList rows={expenses.rows} showDate={false} />
+          {!submitted ? (
+            <Button asChild variant="outline" className="h-12 w-full">
+              <Link href={`/app/expenses/new?workDayId=${day.id}`}>
+                <Plus className="h-4 w-4" />
+                Add fare, lodging, food...
+              </Link>
+            </Button>
+          ) : null}
+        </div>
+        {day.remarks ? (
+          <p className="whitespace-pre-line rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            {day.remarks}
+          </p>
+        ) : null}
         {submitted ? (
           <p className="bg-muted flex items-center gap-2 rounded-md px-3 py-3 text-sm">
             <Lock className="h-4 w-4" />
@@ -69,14 +97,16 @@ export function DaySummaryCard({ day }: { day: WorkDaySummary }) {
             size="lg"
             className="h-14 w-full text-base"
             onClick={() => void submit()}
-            disabled={submitDay.isPending}
+            disabled={submitDay.isPending || unsynced > 0}
           >
             {submitDay.isPending ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
               <Send className="h-5 w-5" />
             )}
-            Submit day
+            {unsynced > 0
+              ? `Waiting for ${unsynced} expense${unsynced === 1 ? '' : 's'} to sync`
+              : 'Submit day with expenses'}
           </Button>
         )}
       </CardContent>

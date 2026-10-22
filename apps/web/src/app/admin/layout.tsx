@@ -22,6 +22,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useT } from '@/lib/i18n';
 import type { TranslationKey } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { NotificationBell } from '@/features/expenses/components';
 
 const NAV: { href: string; labelKey: TranslationKey; icon: typeof LayoutDashboard }[] = [
   { href: '/admin', labelKey: 'nav.dashboard', icon: LayoutDashboard },
@@ -54,10 +55,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <RequireRole roles={[Role.ADMIN, Role.MANAGER]}>
-      <div className="flex min-h-screen bg-muted/30">
+      <div className="bg-muted/30 flex min-h-screen">
         {navOpen ? (
           <div
-            className="fixed inset-0 z-30 bg-foreground/40 lg:hidden"
+            className="bg-foreground/40 fixed inset-0 z-30 lg:hidden"
             onClick={() => setNavOpen(false)}
             aria-hidden
           />
@@ -66,13 +67,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <aside
           id="admin-nav"
           className={cn(
-            'fixed inset-y-0 left-0 z-40 w-64 flex-col border-r bg-background transition-transform lg:static lg:flex lg:translate-x-0',
+            'bg-background fixed inset-y-0 left-0 z-40 w-64 flex-col border-r transition-transform lg:static lg:flex lg:translate-x-0',
             navOpen ? 'flex translate-x-0' : 'hidden -translate-x-full',
           )}
         >
-          <div className="border-b px-6 py-5">
-            <p className="text-base font-semibold leading-tight">{t('app.name')}</p>
-            <p className="text-xs text-muted-foreground">{t('app.tagline')}</p>
+          <div className="flex items-start justify-between gap-2 border-b py-5 pl-6 pr-3">
+            <div>
+              <p className="text-base font-semibold leading-tight">{t('app.name')}</p>
+              <p className="text-muted-foreground text-xs">{t('app.tagline')}</p>
+            </div>
+            <span className="hidden lg:block">
+              <NotificationBell align="start" />
+            </span>
           </div>
 
           <nav className="flex-1 space-y-1 p-3">
@@ -97,11 +103,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="border-t p-3">
             <div className="px-3 pb-2">
               <p className="truncate text-sm font-medium">{user?.name}</p>
-              <p className="text-xs text-muted-foreground">{user?.role}</p>
+              <p className="text-muted-foreground text-xs">{user?.role}</p>
             </div>
             <Button
               variant="ghost"
-              className="w-full justify-start text-muted-foreground"
+              className="text-muted-foreground w-full justify-start"
               onClick={() => void logout()}
             >
               <LogOut className="h-4 w-4" />
@@ -111,7 +117,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex items-center gap-3 border-b bg-background px-4 py-3 lg:hidden">
+          <header className="bg-background flex items-center gap-3 border-b px-4 py-3 lg:hidden">
             <Button
               variant="ghost"
               size="icon"
@@ -122,7 +128,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <span className="font-semibold">{t('app.name')}</span>
+            <span className="flex-1 font-semibold">{t('app.name')}</span>
+            <NotificationBell />
           </header>
 
           <main className="min-w-0 flex-1 p-4 lg:p-8">{children}</main>

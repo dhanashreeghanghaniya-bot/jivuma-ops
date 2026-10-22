@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   DayType,
   PingSource,
+  TravelMode,
   RetailerCategory,
   VisitOutcome,
   VisitPhotoType,
@@ -54,6 +55,12 @@ export const startWorkDaySchema = z.object({
 export type StartWorkDayInput = z.infer<typeof startWorkDaySchema>;
 
 export const endWorkDaySchema = z.object({
+  /**
+   * How he travelled, for the TA draft. Own vehicles are paid per km from the
+   * policy; bus and train are claimed by hand at actuals with a bill. Null: no
+   * travel to claim.
+   */
+  travelMode: z.enum(enumValues(TravelMode) as [TravelMode, ...TravelMode[]]).nullish(),
   /**
    * Mandatory for today's day. Ignored when closing a day left open from an
    * earlier date: that day ends at its last recorded activity instead, since

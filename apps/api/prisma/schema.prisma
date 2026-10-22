@@ -808,6 +808,9 @@ model ExpenseClaim {
   toTownId   String?
   km         Decimal?        @db.Decimal(10, 2)
 
+  /// What the salesman says it was for, e.g. "Hotel Shivam, Junagadh".
+  description String?
+
   amountClaimed  Decimal       @db.Decimal(12, 2)
   amountApproved Decimal?      @db.Decimal(12, 2)
   billPhotoUrls  String[]

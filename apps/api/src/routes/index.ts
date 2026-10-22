@@ -11,6 +11,11 @@ import {
 } from '../modules/field/field.routes';
 import { ordersRouter, productsRouter } from '../modules/orders/orders.routes';
 import {
+  expensesRouter,
+  notificationsRouter,
+  policyRouter,
+} from '../modules/expenses/expenses.routes';
+import {
   distributorsRouter,
   retailersRouter,
   superStockistsRouter,
@@ -38,4 +43,7 @@ apiV1Router.use('/field', fieldRouter);
 apiV1Router.use('/uploads', uploadsRouter);
 apiV1Router.use('/orders', ordersRouter);
 apiV1Router.use('/products', productsRouter);
+apiV1Router.use('/expenses', expensesRouter);
+apiV1Router.use('/settings/allowance-policy', policyRouter);
+apiV1Router.use('/notifications', notificationsRouter);
 apiV1Router.use('/import', importRouter);

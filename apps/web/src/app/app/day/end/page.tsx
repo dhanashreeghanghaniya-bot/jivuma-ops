@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, CloudOff, Loader2, MapPin, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import type { TravelMode } from '@juma/shared';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { EmptyState, LoadingState } from '@/components/data-states';
 import { ApiRequestError } from '@/lib/api-client';
+import { cn } from '@/lib/utils';
 import { formatINR, formatTime } from '@/lib/format';
 import {
   istToday,
@@ -26,6 +28,15 @@ import { newUuid, syncNow, useOutbox, visibleItems } from '@/features/field/offl
 import { PhotoCapture, type CapturedPhoto } from '@/features/field/photo-input';
 import { useDayVisits } from '@/features/field/use-day-visits';
 
+const TRAVEL_CHOICES: { value: TravelMode | 'NONE'; label: string }[] = [
+  { value: 'BIKE', label: 'Bike' },
+  { value: 'CAR', label: 'Car' },
+  { value: 'AUTO', label: 'Auto' },
+  { value: 'BUS', label: 'Bus' },
+  { value: 'TRAIN', label: 'Train' },
+  { value: 'NONE', label: 'No travel' },
+];
+
 /**
  * SPEC 5.1.6. Location is mandatory and the time comes from the server, so
  * this needs signal. Everything recorded today must reach the server first, or
@@ -40,6 +51,7 @@ export default function EndDayPage() {
   const outbox = useOutbox();
 
   const [odometer, setOdometer] = useState('');
+  const [travelMode, setTravelMode] = useState<TravelMode | 'NONE'>('BIKE');
   const [photo, setPhoto] = useState<CapturedPhoto | null>(null);
   const [remarks, setRemarks] = useState('');
   const [locating, setLocating] = useState(false);
@@ -62,7 +74,8 @@ export default function EndDayPage() {
 
   // Unsynced visits and leads block End Day; a dead item does too, until dealt with.
   const unsynced = visibleItems(outbox.items).filter(
-    (i) => !(i.kind === 'visit' && i.visitId), // stored visits whose photos trail are fine
+    // Stored visits and claims whose photos are still trailing are fine.
+    (i) => !(i.kind === 'visit' && i.visitId) && !(i.kind === 'expense' && i.expenseId),
   );
 
   const end = async () => {
@@ -87,6 +100,7 @@ export default function EndDayPage() {
         id: day.id,
         input: {
           location: fix,
+          travelMode: travelMode === 'NONE' ? null : travelMode,
           endOdometer: odometer ? Number(odometer) : null,
           endOdometerPhotoPath,
           remarks: remarks.trim() || null,
@@ -168,6 +182,33 @@ export default function EndDayPage() {
 
       <Card>
         <CardContent className="space-y-4 pt-6">
+          <div className="space-y-2">
+            <Label>How did you travel today?</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {TRAVEL_CHOICES.map((choice) => (
+                <button
+                  key={choice.value}
+                  type="button"
+                  aria-pressed={travelMode === choice.value}
+                  onClick={() => setTravelMode(choice.value)}
+                  className={cn(
+                    'min-h-11 rounded-md border px-2 text-sm font-medium',
+                    travelMode === choice.value &&
+                      'border-primary bg-primary text-primary-foreground',
+                  )}
+                >
+                  {choice.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-muted-foreground text-xs">
+              {travelMode === 'BUS' || travelMode === 'TRAIN'
+                ? 'Bus and train are paid at the fare. Add the fare with the ticket photo after ending the day.'
+                : travelMode === 'NONE'
+                  ? 'No TA will be drafted.'
+                  : 'TA is drafted from the km travelled at the policy rate.'}
+            </p>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="end-odo">Odometer (optional)</Label>
             <div className="flex items-start gap-3">

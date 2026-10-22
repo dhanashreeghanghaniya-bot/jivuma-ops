@@ -3,7 +3,7 @@
 Sales and distribution operations for Juma Food Products across Gujarat, covering the
 chain Company → Super Stockist → Distributor → Retailer.
 
-`SPEC.md` is the source of truth for scope and phasing. **Phases 1–5 (Foundation, Geography & partners, Leads, Salesman field app, Orders) are complete.**
+`SPEC.md` is the source of truth for scope and phasing. **Phases 1–6 (Foundation, Geography & partners, Leads, Salesman field app, Orders, Expenses & approvals) are complete.**
 
 ## Layout
 
@@ -180,6 +180,23 @@ Status runs Placed → Confirmed → Dispatched → Delivered. The admin can ski
 delivery that was never confirmed) but never go back, and can cancel anything not yet
 delivered, with a reason. Every change is logged with who and when, and concurrent changes
 cannot both win. A distributor can only buy from its own super stockist.
+
+## Expenses & approvals
+
+- **Allowance policy** (Settings → Allowance policy) is versioned by effective date. A claim
+  is always judged by the version in force on its own date, so changing rates never
+  re-prices old claims. New versions start today at the earliest.
+- **End Day drafts TA/DA**: DA by day type (none on leave/holiday, and none for a day with no
+  visits when the policy says so); TA as km × the rate for the vehicle the salesman picks.
+  Bus and train are claimed at the fare with a ticket photo.
+- Salesmen add fares, lodging, food, phone and other claims with bill photos (offline too).
+  Claims for a day go for approval when the day is submitted; others are submitted on their
+  own.
+- **Expenses** (admin) is the approval queue: each claim shows its bills, the policy limit
+  and flags (above policy, no bill, km above the day, duplicate). Approve, part-approve or
+  reject with a remark, or bulk-approve everything without a flag. Submitted work days can
+  be approved, rejected or reopened for changes.
+- Salesmen and admins get in-app notifications (bell icon) for submissions and decisions.
 
 ## Salesman field app (PWA)
 

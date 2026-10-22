@@ -6,6 +6,8 @@ import {
   type ListWorkDaysQuery,
   type StartWorkDayInput,
   type WorkDaySummary,
+  type ReviewWorkDayInput,
+  type WorkDayQueueItem,
 } from '@juma/shared';
 import { prisma } from '../../lib/prisma';
 import { ApiException } from '../../lib/http';
@@ -13,6 +15,9 @@ import { writeAuditLog } from '../../lib/audit';
 import { toIstDateString } from '../../lib/dates';
 import { clampDeviceTime, nearestPlaceLabel, pathKm, type LatLng } from '../../lib/geo';
 import { assertOwnPath } from '../../lib/storage';
+import { formatDateDmy, formatInr } from '../../lib/money';
+import { draftForDay, reopenDayClaims, submitDayClaims } from '../expenses/expenses.service';
+import { notify, notifyReviewers } from '../notifications/notifications.service';
 
 /** SPEC 7: odometer km above 1.3x GPS km is flagged. */
 const ODOMETER_GPS_RATIO_LIMIT = 1.3;
@@ -382,29 +387,164 @@ export async function end(
     entityId: day.id,
     after: data,
   });
+  // SPEC 5.1.6: TA/DA drafted from the policy, ready for him to check and submit.
+  await draftForDay(day.id, isStale ? null : input.travelMode);
   return summaryById(day.id);
 }
 
-/** SPEC 5.1.6: once submitted, the day is locked; only the admin can reopen it. */
+/**
+ * SPEC 5.1.6: submitting locks the day and sends its expense drafts for
+ * approval with it. Only the admin can reopen it.
+ */
 export async function submit(salesmanId: string, id: string): Promise<WorkDaySummary> {
   const day = await ownDay(salesmanId, id);
-  if (day.status !== WorkDayStatus.OPEN)
+  if (day.status !== WorkDayStatus.OPEN) {
     throw ApiException.conflict('This day has already been submitted');
+  }
   if (!day.endAt) throw ApiException.conflict('End the day before submitting it');
 
-  await prisma.workDay.update({
-    where: { id: day.id },
-    data: { status: WorkDayStatus.SUBMITTED, submittedAt: new Date() },
+  const claimed = await prisma.$transaction(async (tx) => {
+    const moved = await tx.workDay.updateMany({
+      where: { id: day.id, status: WorkDayStatus.OPEN },
+      data: { status: WorkDayStatus.SUBMITTED, submittedAt: new Date() },
+    });
+    if (moved.count === 0) throw ApiException.conflict('This day has already been submitted');
+    return submitDayClaims(tx, day.id);
   });
+
   await writeAuditLog({
     userId: salesmanId,
     action: 'UPDATE',
     entity: 'WorkDay',
     entityId: day.id,
     before: { status: day.status },
-    after: { status: WorkDayStatus.SUBMITTED },
+    after: { status: WorkDayStatus.SUBMITTED, claimed: claimed.toFixed(2) },
+  });
+  const salesman = await prisma.user.findUniqueOrThrow({
+    where: { id: salesmanId },
+    select: { name: true },
+  });
+  await notifyReviewers({
+    title: 'Work day submitted',
+    body: `${salesman.name} submitted ${formatDateDmy(day.date.toISOString())}, claiming ${formatInr(claimed.toFixed(2))}.`,
+    link: '/admin/expenses',
   });
   return summaryById(day.id);
+}
+
+/** The admin queue (SPEC 4.6): submitted days, oldest first, with claims rolled up. */
+export async function queue(): Promise<WorkDayQueueItem[]> {
+  const rows = await prisma.workDay.findMany({
+    where: { status: WorkDayStatus.SUBMITTED },
+    include: { ...include, salesman: { select: { id: true, name: true } } },
+    orderBy: [{ date: 'asc' }, { submittedAt: 'asc' }],
+    take: 200,
+  });
+  const summaries = await summarise(rows);
+  const claims = await prisma.expenseClaim.groupBy({
+    by: ['workDayId', 'status'],
+    where: { workDayId: { in: rows.map((r) => r.id) } },
+    _sum: { amountClaimed: true },
+    _count: { _all: true },
+  });
+
+  return rows.map((row, i) => {
+    const summary = summaries[i]!;
+    const mine = claims.filter((c) => c.workDayId === row.id);
+    const claimed = mine
+      .filter((c) => c.status !== 'DRAFT')
+      .reduce((sum, c) => sum.add(c._sum.amountClaimed ?? 0), new Prisma.Decimal(0));
+    return {
+      id: row.id,
+      date: summary.date,
+      status: row.status,
+      dayType: row.dayType,
+      salesman: row.salesman,
+      startAt: summary.startAt,
+      endAt: summary.endAt,
+      endedProperly: row.endedProperly,
+      workingMinutes: row.workingMinutes,
+      totalKm: summary.totalKm,
+      gpsKm: summary.gpsKm,
+      visits: summary.totals.visits,
+      orderValue: summary.totals.orderValue,
+      claimed: claimed.toFixed(2),
+      pendingClaims: mine
+        .filter((c) => c.status === 'SUBMITTED')
+        .reduce((n, c) => n + c._count._all, 0),
+      flags: Object.entries(summary.flags)
+        .filter(([, on]) => on)
+        .map(([flag]) => flag),
+      submittedAt: summary.submittedAt,
+    };
+  });
+}
+
+/**
+ * Approve or reject a submitted day, or reopen it so the salesman can fix it
+ * (SPEC 5.1.6 "admin can reopen"). Reopening sends its unreviewed claims back
+ * to draft; claims already decided stay decided.
+ */
+export async function review(
+  id: string,
+  input: ReviewWorkDayInput,
+  actorId: string,
+): Promise<WorkDaySummary> {
+  const day = await prisma.workDay.findUnique({ where: { id } });
+  if (!day) throw ApiException.notFound('Work day not found');
+  if (day.status !== WorkDayStatus.SUBMITTED) {
+    throw ApiException.conflict('Only a submitted day can be reviewed');
+  }
+
+  const next = {
+    APPROVE: WorkDayStatus.APPROVED,
+    REJECT: WorkDayStatus.REJECTED,
+    REOPEN: WorkDayStatus.OPEN,
+  }[input.decision];
+
+  await prisma.$transaction(async (tx) => {
+    const moved = await tx.workDay.updateMany({
+      where: { id, status: WorkDayStatus.SUBMITTED },
+      data: {
+        status: next,
+        reviewedById: input.decision === 'REOPEN' ? null : actorId,
+        reviewedAt: input.decision === 'REOPEN' ? null : new Date(),
+        submittedAt: input.decision === 'REOPEN' ? null : day.submittedAt,
+        // Appended, so the salesman's own End Day note is kept.
+        ...(input.remark
+          ? {
+              remarks: day.remarks
+                ? `${day.remarks}
+Admin: ${input.remark}`
+                : `Admin: ${input.remark}`,
+            }
+          : {}),
+      },
+    });
+    if (moved.count === 0)
+      throw ApiException.conflict('Someone else just reviewed this day. Reload it.');
+    if (input.decision === 'REOPEN') await reopenDayClaims(tx, id);
+  });
+
+  await writeAuditLog({
+    userId: actorId,
+    action: 'UPDATE',
+    entity: 'WorkDay',
+    entityId: id,
+    before: { status: day.status },
+    after: { status: next, remark: input.remark },
+  });
+  const date = formatDateDmy(day.date.toISOString());
+  const verb = { APPROVE: 'approved', REJECT: 'rejected', REOPEN: 'reopened' }[input.decision];
+  await notify([day.salesmanId], {
+    title: `Work day ${verb}`,
+    body:
+      `Your day of ${date} was ${verb}` +
+      (input.decision === 'REOPEN' ? '. Make the changes and submit it again.' : '.') +
+      (input.remark ? ` ${input.remark}` : ''),
+    link: '/app',
+  });
+  return summaryById(id);
 }
 
 /** Salesmen see their own days; admins any salesman's (SPEC 6). */

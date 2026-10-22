@@ -67,9 +67,11 @@ export function SyncStatus() {
 
   useEffect(() => startOutbox(), []);
 
-  // Once the server has the work, show its version: order numbers, distance flags.
+  // Once the server has the work, show its version: order numbers, flags, claim status.
   useEffect(() => {
-    if (lastDeliveredAt) void queryClient.invalidateQueries({ queryKey: ['field'] });
+    if (!lastDeliveredAt) return;
+    void queryClient.invalidateQueries({ queryKey: ['field'] });
+    void queryClient.invalidateQueries({ queryKey: ['expenses'] });
   }, [lastDeliveredAt, queryClient]);
 
   if (online && pending === 0 && !syncing) return null;

@@ -11,6 +11,7 @@ import type { TranslationKey } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useCurrentDay } from '@/features/field/api';
 import { SyncStatus, usePingTimer } from '@/features/field/components';
+import { NotificationBell } from '@/features/expenses/components';
 
 const TABS: { href: string; labelKey: TranslationKey; icon: typeof CalendarCheck }[] = [
   { href: '/app', labelKey: 'nav.today', icon: CalendarCheck },
@@ -45,7 +46,10 @@ export default function SalesmanLayout({ children }: { children: React.ReactNode
             <p className="truncate text-sm font-semibold leading-tight">{user?.name}</p>
             <p className="text-muted-foreground text-xs">{t('app.name')}</p>
           </div>
-          <SyncStatus />
+          <div className="flex items-center gap-1">
+            <SyncStatus />
+            <NotificationBell />
+          </div>
         </header>
 
         <main className="flex-1 px-4 pb-24 pt-4">{children}</main>

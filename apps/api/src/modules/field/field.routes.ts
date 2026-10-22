@@ -15,6 +15,7 @@ import {
   listWorkDaysQuerySchema,
   pingBatchSchema,
   presignUploadSchema,
+  reviewWorkDaySchema,
   signedReadSchema,
   startWorkDaySchema,
   type AttachVisitPhotosInput,
@@ -23,12 +24,13 @@ import {
   type FieldLeadInput,
   type PingBatchInput,
   type PresignUploadInput,
+  type ReviewWorkDayInput,
   type SignedReadInput,
   type StartWorkDayInput,
 } from '@juma/shared';
 import { ApiException, sendOk } from '../../lib/http';
 import { isStorageConfigured, presignUpload, signedReadUrls } from '../../lib/storage';
-import { requireAuth, requireRole } from '../../middleware/auth';
+import { requireAdmin, requireAuth, requireRole } from '../../middleware/auth';
 import { query, validateBody, validateQuery } from '../../middleware/validate';
 import * as field from './field.service';
 import * as visits from './visits.service';
@@ -61,6 +63,23 @@ workdaysRouter.get(
   validateQuery(listWorkDaysQuerySchema),
   wrap(async (req, res) =>
     sendOk(res, await workdays.list(query(req, listWorkDaysQuerySchema), viewer(req))),
+  ),
+);
+// Admin approval queue (SPEC 4.6).
+workdaysRouter.get(
+  '/queue',
+  requireAdmin,
+  wrap(async (_req, res) => sendOk(res, await workdays.queue())),
+);
+workdaysRouter.post(
+  '/:id/review',
+  requireAdmin,
+  validateBody(reviewWorkDaySchema),
+  wrap(async (req, res) =>
+    sendOk(
+      res,
+      await workdays.review(req.params.id as string, req.body as ReviewWorkDayInput, me(req)),
+    ),
   ),
 );
 workdaysRouter.get(
