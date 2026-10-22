@@ -98,6 +98,8 @@ the Windows trust store once and point Node at it:
 $env:NODE_EXTRA_CA_CERTS = "C:\dev\juma-ops\.certs\windows-ca-bundle.pem"
 ```
 
+The API needs the same variable at runtime to reach Supabase Storage for photo uploads.
+
 `.certs/` is gitignored because the bundle is machine-specific. The web build itself needs
 no network access — fonts are system fonts by design.
 

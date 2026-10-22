@@ -1,5 +1,24 @@
 import type { GpsFix } from '@juma/shared';
 
+/** `22-10-2026 02:11:46 pm` in IST, matching the app's DD-MM-YYYY convention. */
+function istStamp(at: Date): string {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+    })
+      .formatToParts(at)
+      .map((p) => [p.type, p.value]),
+  );
+  return `${parts.day}-${parts.month}-${parts.year} ${parts.hour}:${parts.minute}:${parts.second} ${String(parts.dayPeriod).toLowerCase()}`;
+}
+
 /** SPEC 1: field photos must not eat the salesman's data. */
 const MAX_EDGE = 1600;
 const QUALITY = 0.7;
@@ -28,7 +47,7 @@ export async function compressAndStamp(
   bitmap.close();
 
   const stamp = [
-    takenAt.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true }),
+    istStamp(takenAt),
     fix ? `${fix.lat.toFixed(5)}, ${fix.lng.toFixed(5)} ±${fix.accuracyM} m` : 'No GPS',
   ].join('   ');
   const fontSize = Math.max(14, Math.round(width / 45));
