@@ -64,6 +64,17 @@ export const dictionaries = {
     'common.previous': 'Previous',
     'common.next': 'Next',
     'common.comingSoon': 'Coming in a later phase',
+
+    // SPEC 5.1: location is mandatory, so the "turn it on" steps exist in both languages.
+    'location.deniedTitle': 'Location permission is blocked',
+    'location.offTitle': 'Could not get your location',
+    'location.step1': 'Open your phone Settings and turn on Location (GPS).',
+    'location.step2': 'In the browser, tap the lock icon next to the address and allow Location for this app.',
+    'location.step3': 'Step outside or near a window for a better signal, then try again.',
+    'location.unsupported': 'This browser cannot share your location. Open the app in Chrome.',
+    'field.offline': 'Offline',
+    'field.pending': 'pending sync',
+    'field.syncing': 'Syncing...',
   },
 
   // Filled in during Phase 8; anything missing falls back to English.
@@ -78,6 +89,16 @@ export const dictionaries = {
     'nav.orders': 'ઓર્ડર',
     'nav.expenses': 'ખર્ચ',
     'nav.profile': 'પ્રોફાઇલ',
+    'common.retry': 'ફરી પ્રયાસ કરો',
+    'location.deniedTitle': 'લોકેશનની પરવાનગી બંધ છે',
+    'location.offTitle': 'તમારું લોકેશન મળ્યું નથી',
+    'location.step1': 'ફોનના સેટિંગ્સ ખોલો અને લોકેશન (GPS) ચાલુ કરો.',
+    'location.step2': 'બ્રાઉઝરમાં એડ્રેસ પાસેના તાળાના આઇકન પર ટેપ કરો અને આ એપ માટે લોકેશનની મંજૂરી આપો.',
+    'location.step3': 'સારા સિગ્નલ માટે બહાર અથવા બારી પાસે જાઓ, પછી ફરી પ્રયાસ કરો.',
+    'location.unsupported': 'આ બ્રાઉઝર લોકેશન આપી શકતું નથી. એપને Chrome માં ખોલો.',
+    'field.offline': 'ઑફલાઇન',
+    'field.pending': 'સિંક બાકી',
+    'field.syncing': 'સિંક થઈ રહ્યું છે...',
   },
 } as const;
 

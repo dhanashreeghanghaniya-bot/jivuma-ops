@@ -32,9 +32,7 @@ export class ApiRequestError extends Error {
     this.name = 'ApiRequestError';
     this.status = status;
     this.code = error?.code ?? 'INTERNAL_ERROR';
-    this.fieldErrors = Object.fromEntries(
-      (error?.details ?? []).map((d) => [d.path, d.message]),
-    );
+    this.fieldErrors = Object.fromEntries((error?.details ?? []).map((d) => [d.path, d.message]));
   }
 }
 
@@ -166,7 +164,12 @@ export async function loginRequest(phone: string, password: string): Promise<Log
   return data;
 }
 
-export async function bootstrapSession(): Promise<LoginResponse | null> {
+/**
+ * `null` means the server says there is no session. `'offline'` means the
+ * server could not be reached, which is not the same thing: a salesman opening
+ * the app without signal is still signed in (SPEC 5.3).
+ */
+export async function bootstrapSession(): Promise<LoginResponse | null | 'offline'> {
   try {
     const { data } = await apiRequest<LoginResponse>('/auth/refresh', {
       method: 'POST',
@@ -174,9 +177,9 @@ export async function bootstrapSession(): Promise<LoginResponse | null> {
     });
     setAccessToken(data.accessToken);
     return data;
-  } catch {
+  } catch (err) {
     setAccessToken(null);
-    return null;
+    return err instanceof ApiRequestError ? null : 'offline';
   }
 }
 

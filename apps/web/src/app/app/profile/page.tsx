@@ -15,6 +15,7 @@ import { ApiRequestError, api } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { formatPhone } from '@/lib/format';
 import { useT } from '@/lib/i18n';
+import { useOutbox, visibleItems } from '@/features/field/offline/outbox';
 
 type ChangePasswordForm = z.input<typeof changePasswordSchema>;
 
@@ -22,6 +23,8 @@ export default function ProfilePage() {
   const { user, logout } = useAuth();
   const t = useT();
   const [formError, setFormError] = useState<string | null>(null);
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const unsynced = visibleItems(useOutbox().items).length;
 
   const {
     register,
@@ -39,9 +42,7 @@ export default function ProfilePage() {
       // Changing the password revokes every session, this one included.
       await logout();
     } catch (err) {
-      setFormError(
-        err instanceof ApiRequestError ? err.message : 'Could not change the password',
-      );
+      setFormError(err instanceof ApiRequestError ? err.message : 'Could not change the password');
     }
   });
 
@@ -67,7 +68,7 @@ export default function ProfilePage() {
               <Label htmlFor="currentPassword">Current password</Label>
               <Input id="currentPassword" type="password" {...register('currentPassword')} />
               {errors.currentPassword ? (
-                <p className="text-sm text-destructive">{errors.currentPassword.message}</p>
+                <p className="text-destructive text-sm">{errors.currentPassword.message}</p>
               ) : null}
             </div>
 
@@ -75,7 +76,7 @@ export default function ProfilePage() {
               <Label htmlFor="newPassword">New password</Label>
               <Input id="newPassword" type="password" {...register('newPassword')} />
               {errors.newPassword ? (
-                <p className="text-sm text-destructive">{errors.newPassword.message}</p>
+                <p className="text-destructive text-sm">{errors.newPassword.message}</p>
               ) : null}
             </div>
 
@@ -83,11 +84,11 @@ export default function ProfilePage() {
               <Label htmlFor="confirmPassword">Confirm new password</Label>
               <Input id="confirmPassword" type="password" {...register('confirmPassword')} />
               {errors.confirmPassword ? (
-                <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+                <p className="text-destructive text-sm">{errors.confirmPassword.message}</p>
               ) : null}
             </div>
 
-            {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
+            {formError ? <p className="text-destructive text-sm">{formError}</p> : null}
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
@@ -97,10 +98,33 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      <Button variant="outline" className="w-full" onClick={() => void logout()}>
-        <LogOut className="h-4 w-4" />
-        {t('auth.signOut')}
-      </Button>
+      {confirmLogout ? (
+        <Card className="border-destructive/50">
+          <CardContent className="space-y-3 pt-6">
+            <p className="text-sm">
+              {unsynced} item{unsynced === 1 ? ' has' : 's have'} not reached the server yet.
+              Signing out deletes {unsynced === 1 ? 'it' : 'them'} from this phone.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" onClick={() => setConfirmLogout(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button variant="destructive" onClick={() => void logout()}>
+                Sign out anyway
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => (unsynced > 0 ? setConfirmLogout(true) : void logout())}
+        >
+          <LogOut className="h-4 w-4" />
+          {t('auth.signOut')}
+        </Button>
+      )}
     </div>
   );
 }

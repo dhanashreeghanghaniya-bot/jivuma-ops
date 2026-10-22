@@ -9,6 +9,8 @@ import { useAuth } from '@/lib/auth-context';
 import { useT } from '@/lib/i18n';
 import type { TranslationKey } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { useCurrentDay } from '@/features/field/api';
+import { SyncStatus, usePingTimer } from '@/features/field/components';
 
 const TABS: { href: string; labelKey: TranslationKey; icon: typeof CalendarCheck }[] = [
   { href: '/app', labelKey: 'nav.today', icon: CalendarCheck },
@@ -17,6 +19,13 @@ const TABS: { href: string; labelKey: TranslationKey; icon: typeof CalendarCheck
   { href: '/app/expenses', labelKey: 'nav.expenses', icon: Receipt },
   { href: '/app/profile', labelKey: 'nav.profile', icon: User },
 ];
+
+/** Background pings run for the whole field app while a day is open. */
+function FieldBackground() {
+  const { data } = useCurrentDay();
+  usePingTimer(data?.day && !data.isStale ? data.day.id : null);
+  return null;
+}
 
 export default function SalesmanLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -29,15 +38,19 @@ export default function SalesmanLayout({ children }: { children: React.ReactNode
   return (
     <RequireRole roles={[Role.SALESMAN]}>
       {/* Constrained to a phone width so the layout matches the field device. */}
-      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-muted/20">
-        <header className="sticky top-0 z-20 border-b bg-background px-4 py-3">
-          <p className="text-sm font-semibold leading-tight">{user?.name}</p>
-          <p className="text-xs text-muted-foreground">{t('app.name')}</p>
+      <div className="bg-muted/20 mx-auto flex min-h-screen w-full max-w-md flex-col">
+        <FieldBackground />
+        <header className="bg-background sticky top-0 z-20 flex items-center justify-between gap-3 border-b px-4 py-3">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold leading-tight">{user?.name}</p>
+            <p className="text-muted-foreground text-xs">{t('app.name')}</p>
+          </div>
+          <SyncStatus />
         </header>
 
         <main className="flex-1 px-4 pb-24 pt-4">{children}</main>
 
-        <nav className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-md border-t bg-background">
+        <nav className="bg-background fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-md border-t">
           <ul className="grid grid-cols-5">
             {TABS.map(({ href, labelKey, icon: Icon }) => (
               <li key={href}>

@@ -36,6 +36,20 @@ const envSchema = z.object({
   COOKIE_SAMESITE: z.enum(['lax', 'strict', 'none']).default('lax'),
 
   SEED_DEFAULT_PASSWORD: z.string().min(8).default('Juma@12345'),
+
+  // Supabase Storage for field photos. Optional: without it the field app still
+  // records visits and keeps photos queued on the phone until storage is set up.
+  SUPABASE_URL: z
+    .string()
+    .url()
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
+  SUPABASE_SERVICE_ROLE_KEY: z
+    .string()
+    .min(20)
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
+  SUPABASE_STORAGE_BUCKET: z.string().min(1).default('juma-files'),
 });
 
 const parsed = envSchema.safeParse(process.env);

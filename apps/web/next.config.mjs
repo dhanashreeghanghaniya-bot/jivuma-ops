@@ -1,3 +1,14 @@
+import withSerwistInit from '@serwist/next';
+
+const withSerwist = withSerwistInit({
+  swSrc: 'src/app/sw.ts',
+  swDest: 'public/sw.js',
+  // A service worker in `next dev` caches stale bundles between edits. Build
+  // and `next start` to test offline behaviour.
+  disable: process.env.NODE_ENV === 'development',
+  reloadOnOnline: false,
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -6,4 +17,4 @@ const nextConfig = {
   eslint: { ignoreDuringBuilds: true },
 };
 
-export default nextConfig;
+export default withSerwist(nextConfig);

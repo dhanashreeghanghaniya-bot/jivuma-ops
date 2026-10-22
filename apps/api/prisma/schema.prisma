@@ -191,14 +191,14 @@ enum AuditAction {
 // ---------------------------------------------------------------------------
 
 model District {
-  id   String @id @default(cuid())
-  name String
+  id     String  @id @default(cuid())
+  name   String
   // Also the join key against the Gujarat GeoJSON feature property `code`.
-  code String @unique
+  code   String  @unique
   nameGu String
-  lat  Decimal @db.Decimal(9, 6)
-  lng  Decimal @db.Decimal(9, 6)
-  zone Zone
+  lat    Decimal @db.Decimal(9, 6)
+  lng    Decimal @db.Decimal(9, 6)
+  zone   Zone
 
   // Derived from partners/leads; never set by hand (see SPEC 4.1).
   coverageStatus CoverageStatus @default(UNTOUCHED)
@@ -207,10 +207,10 @@ model District {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  towns            Town[]
-  leads            Lead[]
-  superStockists   SuperStockist[]     @relation("SuperStockistCoveredDistricts")
-  territories      SalesmanTerritory[]
+  towns          Town[]
+  leads          Lead[]
+  superStockists SuperStockist[]     @relation("SuperStockistCoveredDistricts")
+  territories    SalesmanTerritory[]
 
   @@index([zone])
   @@index([coverageStatus])
@@ -231,18 +231,18 @@ model Town {
 
   district District @relation(fields: [districtId], references: [id])
 
-  superStockists        SuperStockist[]
-  distributors          Distributor[]
-  distributorsCovering  Distributor[]       @relation("DistributorCoveredTowns")
-  retailers             Retailer[]
-  leads                 Lead[]
-  hqUsers               User[]              @relation("UserHqTown")
-  beatStops             BeatStop[]
-  visits                Visit[]
-  workDaysVisited       WorkDay[]           @relation("WorkDayTownsVisited")
-  expenseClaimsFrom     ExpenseClaim[]      @relation("ExpenseFromTown")
-  expenseClaimsTo       ExpenseClaim[]      @relation("ExpenseToTown")
-  territories           SalesmanTerritory[]
+  superStockists       SuperStockist[]
+  distributors         Distributor[]
+  distributorsCovering Distributor[]       @relation("DistributorCoveredTowns")
+  retailers            Retailer[]
+  leads                Lead[]
+  hqUsers              User[]              @relation("UserHqTown")
+  beatStops            BeatStop[]
+  visits               Visit[]
+  workDaysVisited      WorkDay[]           @relation("WorkDayTownsVisited")
+  expenseClaimsFrom    ExpenseClaim[]      @relation("ExpenseFromTown")
+  expenseClaimsTo      ExpenseClaim[]      @relation("ExpenseToTown")
+  territories          SalesmanTerritory[]
 
   @@unique([districtId, name])
   @@index([districtId])
@@ -253,27 +253,27 @@ model Town {
 // ---------------------------------------------------------------------------
 
 model SuperStockist {
-  id        String        @id @default(cuid())
-  firmName  String
-  ownerName String
-  phone     String
-  altPhone  String?
-  email     String?
-  gstin     String?
-  address   String
-  townId    String
-  lat       Decimal?      @db.Decimal(9, 6)
-  lng       Decimal?      @db.Decimal(9, 6)
-  status    PartnerStatus @default(ACTIVE)
-  onboardedAt DateTime    @default(now())
-  notes     String?
+  id          String        @id @default(cuid())
+  firmName    String
+  ownerName   String
+  phone       String
+  altPhone    String?
+  email       String?
+  gstin       String?
+  address     String
+  townId      String
+  lat         Decimal?      @db.Decimal(9, 6)
+  lng         Decimal?      @db.Decimal(9, 6)
+  status      PartnerStatus @default(ACTIVE)
+  onboardedAt DateTime      @default(now())
+  notes       String?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  town             Town       @relation(fields: [townId], references: [id])
-  coveredDistricts District[] @relation("SuperStockistCoveredDistricts")
+  town             Town          @relation(fields: [townId], references: [id])
+  coveredDistricts District[]    @relation("SuperStockistCoveredDistricts")
   distributors     Distributor[]
   orders           Order[]
 
@@ -317,21 +317,21 @@ model Distributor {
 }
 
 model Retailer {
-  id        String           @id @default(cuid())
-  shopName  String
-  ownerName String
-  phone     String
-  address   String
-  townId    String
-  lat       Decimal          @db.Decimal(9, 6)
-  lng       Decimal          @db.Decimal(9, 6)
+  id            String           @id @default(cuid())
+  shopName      String
+  ownerName     String
+  phone         String
+  address       String
+  townId        String
+  lat           Decimal          @db.Decimal(9, 6)
+  lng           Decimal          @db.Decimal(9, 6)
   distributorId String
-  category  RetailerCategory @default(KIRANA)
-  photoUrl  String?
+  category      RetailerCategory @default(KIRANA)
+  photoUrl      String?
 
   // Shops added in the field start unverified and land in the admin "To verify" queue.
   addedBySalesmanId String?
-  isVerified        Boolean  @default(false)
+  isVerified        Boolean   @default(false)
   verifiedById      String?
   verifiedAt        DateTime?
 
@@ -339,10 +339,10 @@ model Retailer {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  town           Town        @relation(fields: [townId], references: [id])
-  distributor    Distributor @relation(fields: [distributorId], references: [id])
-  addedBySalesman User?      @relation("RetailerAddedBy", fields: [addedBySalesmanId], references: [id])
-  verifiedBy      User?      @relation("RetailerVerifiedBy", fields: [verifiedById], references: [id])
+  town            Town        @relation(fields: [townId], references: [id])
+  distributor     Distributor @relation(fields: [distributorId], references: [id])
+  addedBySalesman User?       @relation("RetailerAddedBy", fields: [addedBySalesmanId], references: [id])
+  verifiedBy      User?       @relation("RetailerVerifiedBy", fields: [verifiedById], references: [id])
 
   visits    Visit[]
   orders    Order[]
@@ -369,14 +369,16 @@ model Lead {
   followUpAt         DateTime?
   notes              String?
   convertedAt        DateTime?
+  /// Client-generated UUID so a lead added offline in the field syncs once.
+  clientUuid         String?    @unique
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  town       Town  @relation(fields: [townId], references: [id])
+  town       Town     @relation(fields: [townId], references: [id])
   district   District @relation(fields: [districtId], references: [id])
-  assignedTo User? @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
+  assignedTo User?    @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
 
   activities LeadActivity[]
   visits     Visit[]
@@ -437,7 +439,7 @@ model Product {
 ///   SS_TO_DISTRIBUTOR       from = superStockist  to = distributor
 ///   DISTRIBUTOR_TO_RETAILER from = distributor    to = retailer
 model Order {
-  id            String      @id @default(cuid())
+  id            String     @id @default(cuid())
   level         OrderLevel
   fromPartyType PartyType
   toPartyType   PartyType
@@ -523,17 +525,17 @@ model OrderSequence {
 // ---------------------------------------------------------------------------
 
 model User {
-  id           String   @id @default(cuid())
-  name         String
+  id            String   @id @default(cuid())
+  name          String
   /// E.164, also the login id.
-  phone        String   @unique
-  passwordHash String
-  role         Role     @default(SALESMAN)
-  isActive     Boolean  @default(true)
-  photoUrl     String?
-  joiningDate  DateTime @db.Date
+  phone         String   @unique
+  passwordHash  String
+  role          Role     @default(SALESMAN)
+  isActive      Boolean  @default(true)
+  photoUrl      String?
+  joiningDate   DateTime @db.Date
   /// Headquarter town — DA rules depend on it.
-  hqTownId     String?
+  hqTownId      String?
   reportingToId String?
 
   createdAt DateTime  @default(now())
@@ -573,15 +575,15 @@ model User {
 
 /// Refresh tokens are stored (hashed) so logout and rotation can actually revoke them.
 model RefreshToken {
-  id        String    @id @default(cuid())
-  userId    String
-  tokenHash String    @unique
-  expiresAt DateTime
-  revokedAt DateTime?
+  id                  String    @id @default(cuid())
+  userId              String
+  tokenHash           String    @unique
+  expiresAt           DateTime
+  revokedAt           DateTime?
   /// Set when this token was rotated, so reuse of an old token can be detected.
   replacedByTokenHash String?
-  userAgent String?
-  ip        String?
+  userAgent           String?
+  ip                  String?
 
   createdAt DateTime @default(now())
 
@@ -688,9 +690,9 @@ model WorkDay {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  salesman   User   @relation("WorkDaySalesman", fields: [salesmanId], references: [id])
-  reviewedBy User?  @relation("WorkDayReviewedBy", fields: [reviewedById], references: [id])
-  beat       Beat?  @relation(fields: [beatId], references: [id])
+  salesman   User  @relation("WorkDaySalesman", fields: [salesmanId], references: [id])
+  reviewedBy User? @relation("WorkDayReviewedBy", fields: [reviewedById], references: [id])
+  beat       Beat? @relation(fields: [beatId], references: [id])
 
   townsVisited  Town[]         @relation("WorkDayTownsVisited")
   visits        Visit[]
@@ -715,6 +717,8 @@ model LocationPing {
   /// Server clock — authoritative.
   receivedAt DateTime   @default(now())
   battery    Int?
+  /// Client-generated UUID so a ping batch re-sent after a dropped response is not doubled.
+  clientUuid String?    @unique
 
   workDay  WorkDay? @relation(fields: [workDayId], references: [id], onDelete: Cascade)
   salesman User     @relation(fields: [salesmanId], references: [id])
@@ -724,13 +728,13 @@ model LocationPing {
 }
 
 model Visit {
-  id         String  @id @default(cuid())
-  workDayId  String
-  salesmanId String
-  retailerId String?
+  id            String  @id @default(cuid())
+  workDayId     String
+  salesmanId    String
+  retailerId    String?
   distributorId String?
-  leadId     String?
-  townId     String
+  leadId        String?
+  townId        String
 
   /// Populated instead of retailerId when a brand-new shop is captured in the field.
   newShopName  String?
@@ -738,8 +742,8 @@ model Visit {
   newShopPhone String?
 
   checkInAt  DateTime
-  checkInLat Decimal  @db.Decimal(9, 6)
-  checkInLng Decimal  @db.Decimal(9, 6)
+  checkInLat Decimal   @db.Decimal(9, 6)
+  checkInLng Decimal   @db.Decimal(9, 6)
   checkOutAt DateTime?
 
   /// Distance between the check-in and the shop's saved pin; flagged above 300 m.
@@ -784,6 +788,8 @@ model VisitPhoto {
 
   visit Visit @relation(fields: [visitId], references: [id], onDelete: Cascade)
 
+  /// Photo paths are derived from the visit's client UUID, so re-attaching is a no-op.
+  @@unique([visitId, url])
   @@index([visitId])
 }
 
@@ -842,12 +848,12 @@ model AllowancePolicy {
   taPerKmCar  Decimal @db.Decimal(12, 2)
   taPerKmAuto Decimal @db.Decimal(12, 2)
 
-  maxLodgingPerNight     Decimal @db.Decimal(12, 2)
-  monthlyPhoneAllowance  Decimal @db.Decimal(12, 2)
+  maxLodgingPerNight       Decimal @db.Decimal(12, 2)
+  monthlyPhoneAllowance    Decimal @db.Decimal(12, 2)
   /// Bus/train TA is reimbursed at actuals; this decides whether a bill is mandatory.
   publicTransportNeedsBill Boolean @default(true)
   /// When true, a day with zero visits earns no DA.
-  daRequiresVisit        Boolean @default(true)
+  daRequiresVisit          Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -856,12 +862,12 @@ model AllowancePolicy {
 }
 
 model SalaryStructure {
-  id              String   @id @default(cuid())
-  salesmanId      String
-  basic           Decimal  @db.Decimal(12, 2)
-  hra             Decimal  @db.Decimal(12, 2)
-  fixedAllowance  Decimal  @db.Decimal(12, 2)
-  effectiveFrom   DateTime @db.Date
+  id             String   @id @default(cuid())
+  salesmanId     String
+  basic          Decimal  @db.Decimal(12, 2)
+  hra            Decimal  @db.Decimal(12, 2)
+  fixedAllowance Decimal  @db.Decimal(12, 2)
+  effectiveFrom  DateTime @db.Date
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -900,18 +906,18 @@ model MonthlyCostReport {
   workingDays Int @default(0)
   leaves      Int @default(0)
 
-  salary         Decimal @default(0) @db.Decimal(12, 2)
-  taTotal        Decimal @default(0) @db.Decimal(12, 2)
-  daTotal        Decimal @default(0) @db.Decimal(12, 2)
-  otherExpenses  Decimal @default(0) @db.Decimal(12, 2)
-  incentives     Decimal @default(0) @db.Decimal(12, 2)
-  deductions     Decimal @default(0) @db.Decimal(12, 2)
-  grandTotal     Decimal @default(0) @db.Decimal(12, 2)
+  salary        Decimal @default(0) @db.Decimal(12, 2)
+  taTotal       Decimal @default(0) @db.Decimal(12, 2)
+  daTotal       Decimal @default(0) @db.Decimal(12, 2)
+  otherExpenses Decimal @default(0) @db.Decimal(12, 2)
+  incentives    Decimal @default(0) @db.Decimal(12, 2)
+  deductions    Decimal @default(0) @db.Decimal(12, 2)
+  grandTotal    Decimal @default(0) @db.Decimal(12, 2)
 
-  ordersCount   Int     @default(0)
-  orderValue    Decimal @default(0) @db.Decimal(12, 2)
-  visitsCount   Int     @default(0)
-  newRetailers  Int     @default(0)
+  ordersCount      Int      @default(0)
+  orderValue       Decimal  @default(0) @db.Decimal(12, 2)
+  visitsCount      Int      @default(0)
+  newRetailers     Int      @default(0)
   costToSalesRatio Decimal? @db.Decimal(8, 4)
 
   status        ReportStatus @default(DRAFT)

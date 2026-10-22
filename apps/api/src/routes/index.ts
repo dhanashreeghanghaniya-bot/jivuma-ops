@@ -4,6 +4,12 @@ import { geoRouter } from '../modules/geo/geo.routes';
 import { importRouter } from '../modules/import/import.routes';
 import { leadsRouter } from '../modules/leads/leads.routes';
 import {
+  fieldRouter,
+  uploadsRouter,
+  visitsRouter,
+  workdaysRouter,
+} from '../modules/field/field.routes';
+import {
   distributorsRouter,
   retailersRouter,
   superStockistsRouter,
@@ -25,4 +31,8 @@ apiV1Router.use('/super-stockists', superStockistsRouter);
 apiV1Router.use('/distributors', distributorsRouter);
 apiV1Router.use('/retailers', retailersRouter);
 apiV1Router.use('/leads', leadsRouter);
+apiV1Router.use('/workdays', workdaysRouter);
+apiV1Router.use('/visits', visitsRouter);
+apiV1Router.use('/field', fieldRouter);
+apiV1Router.use('/uploads', uploadsRouter);
 apiV1Router.use('/import', importRouter);

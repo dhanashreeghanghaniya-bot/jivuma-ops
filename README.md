@@ -3,7 +3,7 @@
 Sales and distribution operations for Juma Food Products across Gujarat, covering the
 chain Company → Super Stockist → Distributor → Retailer.
 
-`SPEC.md` is the source of truth for scope and phasing. **Phases 1–3 (Foundation, Geography & partners, Leads) are complete.**
+`SPEC.md` is the source of truth for scope and phasing. **Phases 1–4 (Foundation, Geography & partners, Leads, Salesman field app) are complete.**
 
 ## Layout
 
@@ -64,6 +64,30 @@ anon/publishable key. The `lock_down_supabase_data_api` migration closes that: R
 every table with no policies, and the `anon` / `authenticated` roles have no grants, now or on
 tables added later. The API connects as the table owner and is unaffected. The Supabase
 security advisor will list "RLS enabled, no policy" for each table — that is the intent.
+
+### Photo storage
+
+Field photos (visits, odometer) go to a private Supabase Storage bucket, `juma-files`
+(JPEG/WebP only, 5 MB per file). The API hands out signed upload URLs and 5-minute signed
+read URLs; the browser never holds a storage key. Set the **secret** key (Project Settings →
+API Keys; `sb_secret_…`, or the legacy `service_role` key) in `apps/api/.env`:
+
+```ini
+SUPABASE_URL=https://<ref>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
+SUPABASE_STORAGE_BUCKET=juma-files
+```
+
+The bucket itself is not created by a migration. On a new project, create it once from the
+SQL editor:
+
+```sql
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('juma-files', 'juma-files', false, 5242880, array['image/jpeg','image/webp']);
+```
+
+Without the key the field app keeps working: visits and orders sync, and photos wait on the
+phone (shown as "waiting to upload") until the key is set.
 
 ### Behind a TLS-intercepting proxy
 
@@ -140,6 +164,23 @@ The seed covers all 33 Gujarat districts, 18 towns, 4 super stockists, 3 distrib
 13 retailers, 8 leads and roughly two weeks of work days, visits, GPS pings, orders and
 TA/DA claims — enough to exercise every coverage state (COVERED, SS_ONLY, LEADS_ONLY,
 UNTOUCHED).
+
+## Salesman field app (PWA)
+
+The salesman UI at `/app` is an installable PWA. Work recorded in the field (visits with
+orders and photos, new shops, leads, GPS pings) goes into an outbox in IndexedDB first and
+syncs automatically when the phone has signal; every item carries a client UUID so a retry
+never creates a duplicate. The salesman's territory (towns, shops, distributors, products,
+beats) is cached on the phone after the first load. Starting and ending the day need signal:
+both take their time from the server clock and their position from the phone, by design.
+
+- The service worker is only built for production. To test offline behaviour run
+  `pnpm build` then `pnpm --filter @juma/web start`, not `pnpm dev`.
+- Geolocation, the camera and the service worker all require a secure context. `localhost`
+  counts; a phone on your LAN hitting `http://192.168.x.x:3000` does not. To try it on a real
+  phone, use an HTTPS tunnel or a deployed preview.
+- Location is recorded every 10 minutes only while the app is open on screen, plus on every
+  visit, order and lead. Background tracking needs the native app (SPEC 10).
 
 ## Conventions
 

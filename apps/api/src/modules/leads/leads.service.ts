@@ -226,7 +226,7 @@ async function assertAssigneeExists(id: string | null | undefined): Promise<void
 export async function create(
   input: CreateLeadInput,
   actorId: string,
-  options: { createdBySalesmanId?: string } = {},
+  options: { createdBySalesmanId?: string; clientUuid?: string } = {},
 ): Promise<LeadDetail> {
   const districtId = await requireTownDistrict(input.townId);
   await assertAssigneeExists(input.assignedToId);
@@ -248,6 +248,7 @@ export async function create(
           : new Prisma.Decimal(input.expectedInvestment),
       followUpAt: followUpDate(input.followUpAt) ?? null,
       notes: input.notes ?? null,
+      clientUuid: options.clientUuid ?? null,
       activities: {
         create: {
           userId: actorId,
