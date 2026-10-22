@@ -18,7 +18,7 @@ import {
   WorkDayStatus,
 } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { GUJARAT_DISTRICTS } from '@juma/shared';
+import { GUJARAT_DISTRICTS, ORDER_STATUS_FLOW } from '@juma/shared';
 import { recomputeAllCoverage } from '../src/modules/geo/coverage.service';
 import { DISTRIBUTORS, PRODUCTS, RETAILERS, SUPER_STOCKISTS, TOWNS } from './seed/data';
 import {
@@ -58,7 +58,14 @@ async function seedDistricts() {
         lat: d.lat,
         lng: d.lng,
       },
-      update: { code: d.code, name: d.name, nameGu: d.nameGu, zone: d.zone, lat: d.lat, lng: d.lng },
+      update: {
+        code: d.code,
+        name: d.name,
+        nameGu: d.nameGu,
+        zone: d.zone,
+        lat: d.lat,
+        lng: d.lng,
+      },
     });
   }
   console.log(`  districts: ${GUJARAT_DISTRICTS.length}`);
@@ -77,7 +84,13 @@ async function seedTowns() {
         type: t.type,
         population: t.population ?? null,
       },
-      update: { name: t.name, lat: t.lat, lng: t.lng, type: t.type, population: t.population ?? null },
+      update: {
+        name: t.name,
+        lat: t.lat,
+        lng: t.lng,
+        type: t.type,
+        population: t.population ?? null,
+      },
     });
   }
   console.log(`  towns: ${TOWNS.length}`);
@@ -319,14 +332,119 @@ interface LeadSeed {
 
 async function seedLeads(adminId: string) {
   const leads: LeadSeed[] = [
-    { key: 'L_PRB_1', type: LeadType.DISTRIBUTOR, name: 'Mukesh Odedra', firmName: 'Sagar Agency', phone: '+919833000101', townKey: 'PRB_PORBANDAR', districtCode: 'PRB', source: LeadSource.FIELD, stage: LeadStage.CONTACTED, assignedToKey: 'salesman2', expectedInvestment: 300000, followUpInDays: 3, notes: 'Has a godown near the fishing harbour. Wants exclusivity for Porbandar city.' },
-    { key: 'L_PRB_2', type: LeadType.RETAILER, name: 'Vipul Makwana', firmName: 'Ranavav Kirana', phone: '+919833000102', townKey: 'PRB_RANAVAV', districtCode: 'PRB', source: LeadSource.REFERRAL, stage: LeadStage.NEW, assignedToKey: 'salesman2', followUpInDays: 7, notes: 'Referred by Halar Sales Corporation.' },
-    { key: 'L_AMR_1', type: LeadType.DISTRIBUTOR, name: 'Nilesh Kanabar', firmName: 'Kanabar Trading', phone: '+919833000201', townKey: 'AMR_AMRELI', districtCode: 'AMR', source: LeadSource.EXPO, stage: LeadStage.MEETING_DONE, assignedToKey: 'salesman2', expectedInvestment: 450000, followUpInDays: -2, notes: 'Met at the Rajkot food expo. Asking for 30 days credit.' },
-    { key: 'L_AMR_2', type: LeadType.SS, name: 'Kishor Bhanderi', firmName: 'Bhanderi Distributors', phone: '+919833000202', townKey: 'AMR_SAVARKUNDLA', districtCode: 'AMR', source: LeadSource.INBOUND_CALL, stage: LeadStage.NEW, followUpInDays: 10, notes: 'Called the office asking about super stockist terms.' },
-    { key: 'L_MRB_1', type: LeadType.DISTRIBUTOR, name: 'Ashish Patel', firmName: 'Morbi Sales Co', phone: '+919833000301', townKey: 'MRB_MORBI', districtCode: 'MRB', source: LeadSource.FIELD, stage: LeadStage.NEGOTIATION, assignedToKey: 'salesman1', expectedInvestment: 600000, followUpInDays: 1, notes: 'Negotiating margin. Already distributes two other snack brands.' },
-    { key: 'L_MRB_2', type: LeadType.RETAILER, name: 'Dharmesh Sutariya', firmName: 'Wankaner Provision', phone: '+919833000302', townKey: 'MRB_WANKANER', districtCode: 'MRB', source: LeadSource.FIELD, stage: LeadStage.CONTACTED, assignedToKey: 'salesman1', followUpInDays: 5, notes: 'Wants a trial order of namkeen.' },
-    { key: 'L_RJT_1', type: LeadType.RETAILER, name: 'Hiren Joshi', firmName: 'Joshi Super Store', phone: '+919833000401', townKey: 'RJT_GONDAL', districtCode: 'RJT', source: LeadSource.FIELD, stage: LeadStage.WON, assignedToKey: 'salesman1', notes: 'Converted — now billed through Patel Traders.' },
-    { key: 'L_JMN_1', type: LeadType.DISTRIBUTOR, name: 'Sagar Bhatt', firmName: 'Bhatt Agencies', phone: '+919833000501', townKey: 'JMN_DHROL', districtCode: 'JMN', source: LeadSource.REFERRAL, stage: LeadStage.LOST, assignedToKey: 'salesman2', notes: 'Went with a competitor.', lostReason: 'Competitor offered a higher margin' },
+    {
+      key: 'L_PRB_1',
+      type: LeadType.DISTRIBUTOR,
+      name: 'Mukesh Odedra',
+      firmName: 'Sagar Agency',
+      phone: '+919833000101',
+      townKey: 'PRB_PORBANDAR',
+      districtCode: 'PRB',
+      source: LeadSource.FIELD,
+      stage: LeadStage.CONTACTED,
+      assignedToKey: 'salesman2',
+      expectedInvestment: 300000,
+      followUpInDays: 3,
+      notes: 'Has a godown near the fishing harbour. Wants exclusivity for Porbandar city.',
+    },
+    {
+      key: 'L_PRB_2',
+      type: LeadType.RETAILER,
+      name: 'Vipul Makwana',
+      firmName: 'Ranavav Kirana',
+      phone: '+919833000102',
+      townKey: 'PRB_RANAVAV',
+      districtCode: 'PRB',
+      source: LeadSource.REFERRAL,
+      stage: LeadStage.NEW,
+      assignedToKey: 'salesman2',
+      followUpInDays: 7,
+      notes: 'Referred by Halar Sales Corporation.',
+    },
+    {
+      key: 'L_AMR_1',
+      type: LeadType.DISTRIBUTOR,
+      name: 'Nilesh Kanabar',
+      firmName: 'Kanabar Trading',
+      phone: '+919833000201',
+      townKey: 'AMR_AMRELI',
+      districtCode: 'AMR',
+      source: LeadSource.EXPO,
+      stage: LeadStage.MEETING_DONE,
+      assignedToKey: 'salesman2',
+      expectedInvestment: 450000,
+      followUpInDays: -2,
+      notes: 'Met at the Rajkot food expo. Asking for 30 days credit.',
+    },
+    {
+      key: 'L_AMR_2',
+      type: LeadType.SS,
+      name: 'Kishor Bhanderi',
+      firmName: 'Bhanderi Distributors',
+      phone: '+919833000202',
+      townKey: 'AMR_SAVARKUNDLA',
+      districtCode: 'AMR',
+      source: LeadSource.INBOUND_CALL,
+      stage: LeadStage.NEW,
+      followUpInDays: 10,
+      notes: 'Called the office asking about super stockist terms.',
+    },
+    {
+      key: 'L_MRB_1',
+      type: LeadType.DISTRIBUTOR,
+      name: 'Ashish Patel',
+      firmName: 'Morbi Sales Co',
+      phone: '+919833000301',
+      townKey: 'MRB_MORBI',
+      districtCode: 'MRB',
+      source: LeadSource.FIELD,
+      stage: LeadStage.NEGOTIATION,
+      assignedToKey: 'salesman1',
+      expectedInvestment: 600000,
+      followUpInDays: 1,
+      notes: 'Negotiating margin. Already distributes two other snack brands.',
+    },
+    {
+      key: 'L_MRB_2',
+      type: LeadType.RETAILER,
+      name: 'Dharmesh Sutariya',
+      firmName: 'Wankaner Provision',
+      phone: '+919833000302',
+      townKey: 'MRB_WANKANER',
+      districtCode: 'MRB',
+      source: LeadSource.FIELD,
+      stage: LeadStage.CONTACTED,
+      assignedToKey: 'salesman1',
+      followUpInDays: 5,
+      notes: 'Wants a trial order of namkeen.',
+    },
+    {
+      key: 'L_RJT_1',
+      type: LeadType.RETAILER,
+      name: 'Hiren Joshi',
+      firmName: 'Joshi Super Store',
+      phone: '+919833000401',
+      townKey: 'RJT_GONDAL',
+      districtCode: 'RJT',
+      source: LeadSource.FIELD,
+      stage: LeadStage.WON,
+      assignedToKey: 'salesman1',
+      notes: 'Converted — now billed through Patel Traders.',
+    },
+    {
+      key: 'L_JMN_1',
+      type: LeadType.DISTRIBUTOR,
+      name: 'Sagar Bhatt',
+      firmName: 'Bhatt Agencies',
+      phone: '+919833000501',
+      townKey: 'JMN_DHROL',
+      districtCode: 'JMN',
+      source: LeadSource.REFERRAL,
+      stage: LeadStage.LOST,
+      assignedToKey: 'salesman2',
+      notes: 'Went with a competitor.',
+      lostReason: 'Competitor offered a higher margin',
+    },
   ];
 
   const today = dateOnly(new Date());
@@ -345,8 +463,7 @@ async function seedLeads(adminId: string) {
       lostReason: lead.lostReason ?? null,
       assignedToId,
       expectedInvestment: lead.expectedInvestment ?? null,
-      followUpAt:
-        lead.followUpInDays === undefined ? null : addDays(today, lead.followUpInDays),
+      followUpAt: lead.followUpInDays === undefined ? null : addDays(today, lead.followUpInDays),
       notes: lead.notes,
       convertedAt: lead.stage === LeadStage.WON ? addDays(today, -6) : null,
     };
@@ -411,10 +528,34 @@ async function seedTerritoriesAndBeats() {
   }
 
   const beats = [
-    { key: 'B1', name: 'Rajkot City Beat', salesmanKey: 'salesman1', dayOfWeek: 1, stops: ['RT_RJT_1', 'RT_RJT_2'] },
-    { key: 'B2', name: 'Gondal - Jetpur Beat', salesmanKey: 'salesman1', dayOfWeek: 3, stops: ['RT_RJT_3', 'RT_RJT_4', 'RT_RJT_5'] },
-    { key: 'B3', name: 'Jamnagar City Beat', salesmanKey: 'salesman2', dayOfWeek: 2, stops: ['RT_JMN_1', 'RT_JMN_2'] },
-    { key: 'B4', name: 'Junagadh Beat', salesmanKey: 'salesman2', dayOfWeek: 4, stops: ['RT_JNG_1', 'RT_JNG_2', 'RT_JNG_3'] },
+    {
+      key: 'B1',
+      name: 'Rajkot City Beat',
+      salesmanKey: 'salesman1',
+      dayOfWeek: 1,
+      stops: ['RT_RJT_1', 'RT_RJT_2'],
+    },
+    {
+      key: 'B2',
+      name: 'Gondal - Jetpur Beat',
+      salesmanKey: 'salesman1',
+      dayOfWeek: 3,
+      stops: ['RT_RJT_3', 'RT_RJT_4', 'RT_RJT_5'],
+    },
+    {
+      key: 'B3',
+      name: 'Jamnagar City Beat',
+      salesmanKey: 'salesman2',
+      dayOfWeek: 2,
+      stops: ['RT_JMN_1', 'RT_JMN_2'],
+    },
+    {
+      key: 'B4',
+      name: 'Junagadh Beat',
+      salesmanKey: 'salesman2',
+      dayOfWeek: 4,
+      stops: ['RT_JNG_1', 'RT_JNG_2', 'RT_JNG_3'],
+    },
   ];
 
   for (const beat of beats) {
@@ -519,7 +660,9 @@ async function seedFieldHistory(policy: {
     select: { id: true, townId: true, lat: true, lng: true, distributorId: true, shopName: true },
   });
   const retailerById = new Map(retailerRows.map((r) => [r.id, r]));
-  const products = await prisma.product.findMany({ where: { id: { startsWith: 'seed_product_' } } });
+  const products = await prisma.product.findMany({
+    where: { id: { startsWith: 'seed_product_' } },
+  });
 
   const today = dateOnly(new Date());
   // Highest sequence used per `YYMM`, so Phase 5 allocates real order numbers
@@ -646,7 +789,10 @@ async function seedFieldHistory(policy: {
         });
         pingIndex++;
       }
-      const pingResult = await prisma.locationPing.createMany({ data: pings, skipDuplicates: true });
+      const pingResult = await prisma.locationPing.createMany({
+        data: pings,
+        skipDuplicates: true,
+      });
       counters.pings += pingResult.count;
 
       for (const [index, retailerKey] of visitRetailers.entries()) {
@@ -677,9 +823,23 @@ async function seedFieldHistory(policy: {
             checkInLng: checkIn.lng,
             checkOutAt: new Date(checkInAt.getTime() + randomInt(rand, 8, 25) * 60000),
             distanceFromShopMeters: haversineMeters(shopPoint, checkIn),
-            outcome: tookOrder ? VisitOutcome.ORDER_TAKEN : pick(rand, [VisitOutcome.NO_ORDER, VisitOutcome.SHOP_CLOSED, VisitOutcome.FOLLOW_UP]),
-            noOrderReason: tookOrder ? null : pick(rand, ['Stock still available', 'Owner not present', 'Asked to come next week']),
-            notes: tookOrder ? 'Shelf restocked and order confirmed.' : 'Will follow up on the next beat.',
+            outcome: tookOrder
+              ? VisitOutcome.ORDER_TAKEN
+              : pick(rand, [
+                  VisitOutcome.NO_ORDER,
+                  VisitOutcome.SHOP_CLOSED,
+                  VisitOutcome.FOLLOW_UP,
+                ]),
+            noOrderReason: tookOrder
+              ? null
+              : pick(rand, [
+                  'Stock still available',
+                  'Owner not present',
+                  'Asked to come next week',
+                ]),
+            notes: tookOrder
+              ? 'Shelf restocked and order confirmed.'
+              : 'Will follow up on the next beat.',
           },
           update: {},
         });
@@ -703,8 +863,7 @@ async function seedFieldHistory(policy: {
 
         // Derived from the order's own identity rather than a running counter, so
         // re-seeding never renumbers (and collides with) an existing order.
-        const seq =
-          day.getUTCDate() * 100 + (plan.salesmanKey === 'salesman1' ? 0 : 50) + index;
+        const seq = day.getUTCDate() * 100 + (plan.salesmanKey === 'salesman1' ? 0 : 50) + index;
         const monthKey = `${String(day.getUTCFullYear()).slice(2)}${String(day.getUTCMonth() + 1).padStart(2, '0')}`;
         orderSeq.set(monthKey, Math.max(orderSeq.get(monthKey) ?? 0, seq));
 
@@ -728,7 +887,12 @@ async function seedFieldHistory(policy: {
             distributorId: retailer.distributorId,
             retailerId: retailer.id,
             orderNumber: orderNumber(day, seq),
-            status: offset > 7 ? OrderStatus.DELIVERED : offset > 3 ? OrderStatus.DISPATCHED : OrderStatus.CONFIRMED,
+            status:
+              offset > 7
+                ? OrderStatus.DELIVERED
+                : offset > 3
+                  ? OrderStatus.DISPATCHED
+                  : OrderStatus.CONFIRMED,
             totalAmount,
             takenBySalesmanId: salesmanId,
             visitId,
@@ -739,7 +903,8 @@ async function seedFieldHistory(policy: {
                 id: sid('orderitem', `${plan.salesmanKey}_${dayKey}_${index}_${itemIndex}`),
                 productId: i.product.id,
                 qtyCases: i.qtyCases,
-                qtyUnits: i.qtyCases * i.product.unitsPerCase,
+                // Whole cases only; `qtyUnits` is loose units on top of the cases.
+                qtyUnits: 0,
                 rate: i.rate,
                 amount: i.amount,
               })),
@@ -755,6 +920,16 @@ async function seedFieldHistory(policy: {
             },
           },
           update: {},
+        });
+        await seedStatusTrail(orderId, {
+          finalStatus:
+            offset > 7
+              ? OrderStatus.DELIVERED
+              : offset > 3
+                ? OrderStatus.DISPATCHED
+                : OrderStatus.CONFIRMED,
+          placedAt: checkInAt,
+          adminId: sid('user', 'admin'),
         });
         counters.orders++;
       }
@@ -825,7 +1000,9 @@ async function seedFieldHistory(policy: {
             amountClaimed: 1250,
             status: ExpenseStatus.SUBMITTED,
             isAutoDrafted: false,
-            billPhotoUrls: [`bills/${salesmanId}/${day.toISOString().slice(0, 7)}/${dayKey}-lodging.jpg`],
+            billPhotoUrls: [
+              `bills/${salesmanId}/${day.toISOString().slice(0, 7)}/${dayKey}-lodging.jpg`,
+            ],
             adminRemark: null,
           },
           update: {},
@@ -835,11 +1012,14 @@ async function seedFieldHistory(policy: {
     }
   }
 
+  // Raise the per-month high-water mark, never lower it: lowering it on a
+  // re-seed would hand out numbers already used by orders placed since.
   for (const [month, lastSeq] of orderSeq) {
+    const existing = await prisma.orderSequence.findUnique({ where: { month } });
     await prisma.orderSequence.upsert({
       where: { month },
       create: { month, lastSeq },
-      update: { lastSeq },
+      update: { lastSeq: Math.max(existing?.lastSeq ?? 0, lastSeq) },
     });
   }
 
@@ -849,7 +1029,9 @@ async function seedFieldHistory(policy: {
 }
 
 async function seedCompanyOrders() {
-  const products = await prisma.product.findMany({ where: { id: { startsWith: 'seed_product_' } } });
+  const products = await prisma.product.findMany({
+    where: { id: { startsWith: 'seed_product_' } },
+  });
   const today = dateOnly(new Date());
 
   for (const [index, ss] of SUPER_STOCKISTS.entries()) {
@@ -885,7 +1067,8 @@ async function seedCompanyOrders() {
             id: sid('orderitem', `company_${ss.key}_${itemIndex}`),
             productId: i.product.id,
             qtyCases: i.qtyCases,
-            qtyUnits: i.qtyCases * i.product.unitsPerCase,
+            // Whole cases only; `qtyUnits` is loose units on top of the cases.
+            qtyUnits: 0,
             rate: i.rate,
             amount: i.amount,
           })),
@@ -902,9 +1085,138 @@ async function seedCompanyOrders() {
       },
       update: {},
     });
+    await seedStatusTrail(sid('order', `company_${ss.key}`), {
+      finalStatus: OrderStatus.DELIVERED,
+      placedAt: orderDate,
+      adminId: sid('user', 'admin'),
+      // The DELIVERED entry above predates the trail; keep it as the last step.
+      skip: [OrderStatus.DELIVERED],
+    });
   }
 
   console.log(`  company orders: ${SUPER_STOCKISTS.length}`);
+}
+
+/**
+ * SS -> distributor orders, so the middle of the chain has history too: one
+ * delivered and one open per distributor, plus one cancelled (SPEC 4.4).
+ */
+async function seedChainOrders() {
+  const products = await prisma.product.findMany({
+    where: { isActive: true },
+    orderBy: { sku: 'asc' },
+  });
+  const today = dateOnly(new Date());
+  const adminId = sid('user', 'admin');
+  let count = 0;
+
+  for (const [index, d] of DISTRIBUTORS.entries()) {
+    const plans = [
+      { key: 'a', daysAgo: 12 + index, status: OrderStatus.DELIVERED, note: null },
+      {
+        key: 'b',
+        daysAgo: 2 + index,
+        status: index === 0 ? OrderStatus.CANCELLED : OrderStatus.CONFIRMED,
+        note: index === 0 ? 'Distributor asked to hold until the festival stock clears.' : null,
+      },
+    ];
+    for (const plan of plans) {
+      const orderId = sid('order', `chain_${d.key}_${plan.key}`);
+      const orderDate = atIst(addDays(today, -plan.daysAgo), 11);
+      const items = products.slice(index, index + 3).map((product, itemIndex) => {
+        const qtyCases = randomInt(rand, 8, 25);
+        const rate = Number(product.distributorPrice);
+        return {
+          product,
+          itemIndex,
+          qtyCases,
+          rate,
+          amount: round2(qtyCases * product.unitsPerCase * rate),
+        };
+      });
+      await prisma.order.upsert({
+        where: { id: orderId },
+        create: {
+          id: orderId,
+          level: OrderLevel.SS_TO_DISTRIBUTOR,
+          fromPartyType: PartyType.SUPER_STOCKIST,
+          toPartyType: PartyType.DISTRIBUTOR,
+          superStockistId: sid('ss', d.superStockistKey),
+          distributorId: sid('distributor', d.key),
+          // 8000+ keeps these clear of the field and company ranges.
+          orderNumber: orderNumber(orderDate, 8000 + index * 10 + (plan.key === 'a' ? 0 : 1)),
+          status: plan.status,
+          totalAmount: round2(items.reduce((sum, i) => sum + i.amount, 0)),
+          orderDate,
+          expectedDelivery: addDays(orderDate, 3),
+          items: {
+            create: items.map((i) => ({
+              id: sid('orderitem', `chain_${d.key}_${plan.key}_${i.itemIndex}`),
+              productId: i.product.id,
+              qtyCases: i.qtyCases,
+              qtyUnits: 0,
+              rate: i.rate,
+              amount: i.amount,
+            })),
+          },
+        },
+        update: {},
+      });
+      await seedStatusTrail(orderId, {
+        finalStatus: plan.status,
+        placedAt: orderDate,
+        adminId,
+        note: plan.note,
+      });
+      count++;
+    }
+  }
+  console.log(`  chain orders (SS -> distributor): ${count}`);
+}
+
+/**
+ * One status-log entry per step from PLACED to `finalStatus`, a day apart, so
+ * every seeded order has a complete timeline. Ids are deterministic, so a
+ * re-seed fills gaps in older data without duplicating anything.
+ */
+async function seedStatusTrail(
+  orderId: string,
+  opts: {
+    finalStatus: OrderStatus;
+    placedAt: Date;
+    adminId: string;
+    note?: string | null;
+    skip?: OrderStatus[];
+  },
+) {
+  const path: OrderStatus[] =
+    opts.finalStatus === OrderStatus.CANCELLED
+      ? [OrderStatus.PLACED, OrderStatus.CANCELLED]
+      : ORDER_STATUS_FLOW.slice(0, ORDER_STATUS_FLOW.indexOf(opts.finalStatus) + 1);
+  const existingPlaced = await prisma.orderStatusLog.findFirst({
+    where: { orderId, status: OrderStatus.PLACED },
+  });
+
+  // A day per step, squeezed for recent orders so no step lands in the future.
+  const stepMs = Math.min(86_400_000, (Date.now() - opts.placedAt.getTime()) / path.length);
+
+  for (const [step, status] of path.entries()) {
+    if (opts.skip?.includes(status)) continue;
+    if (status === OrderStatus.PLACED && existingPlaced) continue;
+    const id = `${orderId}_log_${status}`;
+    await prisma.orderStatusLog.upsert({
+      where: { id },
+      create: {
+        id,
+        orderId,
+        status,
+        changedById: opts.adminId,
+        note: status === OrderStatus.CANCELLED ? (opts.note ?? 'Cancelled') : null,
+        at: new Date(opts.placedAt.getTime() + step * stepMs),
+      },
+      update: { at: new Date(opts.placedAt.getTime() + step * stepMs) },
+    });
+  }
 }
 
 async function seedNotifications() {
@@ -935,7 +1247,13 @@ async function main() {
   await seedTerritoriesAndBeats();
   await seedSalaryAndIncentives(admin.id);
   await seedFieldHistory(policy);
+  // Earlier seeds stored total units in `qtyUnits`; it means loose units.
+  await prisma.orderItem.updateMany({
+    where: { id: { startsWith: 'seed_orderitem_' } },
+    data: { qtyUnits: 0 },
+  });
   await seedCompanyOrders();
+  await seedChainOrders();
   await seedNotifications();
 
   await recomputeAllCoverage(prisma);

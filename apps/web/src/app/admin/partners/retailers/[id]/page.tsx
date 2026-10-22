@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
+import { OrderHistoryCard } from '@/features/orders/order-history';
+import { VisitHistoryCard } from '@/features/partners/visit-history';
 import Link from 'next/link';
 import { BadgeCheck, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
@@ -12,12 +14,7 @@ import { ErrorState, LoadingState } from '@/components/data-states';
 import { ApiRequestError } from '@/lib/api-client';
 import { formatDate, formatDateTime, formatNumber, formatPhone } from '@/lib/format';
 import { useRetailer, useVerifyRetailer } from '@/features/partners/api';
-import {
-  ContactCard,
-  DetailHeader,
-  HistoryPlaceholder,
-  StatCard,
-} from '@/features/partners/partner-detail';
+import { ContactCard, DetailHeader, StatCard } from '@/features/partners/partner-detail';
 import { RetailerDialog } from '@/features/partners/retailer-dialog';
 
 export default function RetailerDetailPage() {
@@ -111,11 +108,11 @@ export default function RetailerDetailPage() {
             <CardContent className="flex flex-wrap items-center justify-between gap-2">
               <Link
                 href={`/admin/partners/distributors/${data.distributor.id}`}
-                className="font-medium text-primary underline-offset-2 hover:underline"
+                className="text-primary font-medium underline-offset-2 hover:underline"
               >
                 {data.distributor.firmName}
               </Link>
-              <span className="text-sm tabular-nums text-muted-foreground">
+              <span className="text-muted-foreground text-sm tabular-nums">
                 {formatPhone(data.distributor.phone)}
               </span>
             </CardContent>
@@ -128,15 +125,15 @@ export default function RetailerDetailPage() {
             <CardContent>
               <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
                 <div>
-                  <dt className="text-xs text-muted-foreground">Added by</dt>
+                  <dt className="text-muted-foreground text-xs">Added by</dt>
                   <dd>{data.addedBySalesman?.name ?? 'Office'}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-muted-foreground">Verified at</dt>
+                  <dt className="text-muted-foreground text-xs">Verified at</dt>
                   <dd>{data.verifiedAt ? formatDateTime(data.verifiedAt) : 'Not yet'}</dd>
                 </div>
                 <div className="sm:col-span-2">
-                  <dt className="text-xs text-muted-foreground">Pin</dt>
+                  <dt className="text-muted-foreground text-xs">Pin</dt>
                   <dd className="tabular-nums">
                     {data.lat.toFixed(6)}, {data.lng.toFixed(6)}
                   </dd>
@@ -148,8 +145,8 @@ export default function RetailerDetailPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <HistoryPlaceholder title="Visit history" phase="Phase 4" />
-        <HistoryPlaceholder title="Order history" phase="Phase 5" />
+        <VisitHistoryCard retailerId={data.id} />
+        <OrderHistoryCard partner={{ retailerId: data.id }} />
       </div>
 
       <RetailerDialog open={editing} onOpenChange={setEditing} editing={data} />

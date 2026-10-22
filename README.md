@@ -3,7 +3,7 @@
 Sales and distribution operations for Juma Food Products across Gujarat, covering the
 chain Company → Super Stockist → Distributor → Retailer.
 
-`SPEC.md` is the source of truth for scope and phasing. **Phases 1–4 (Foundation, Geography & partners, Leads, Salesman field app) are complete.**
+`SPEC.md` is the source of truth for scope and phasing. **Phases 1–5 (Foundation, Geography & partners, Leads, Salesman field app, Orders) are complete.**
 
 ## Layout
 
@@ -163,9 +163,23 @@ Password for all three is `Juma@12345` (override with `SEED_DEFAULT_PASSWORD`).
 | Salesman (Suresh Makwana) | `+919812300003` |
 
 The seed covers all 33 Gujarat districts, 18 towns, 4 super stockists, 3 distributors,
-13 retailers, 8 leads and roughly two weeks of work days, visits, GPS pings, orders and
+13 retailers, 8 leads, 10 company and SS → distributor orders (one cancelled), and roughly two weeks of work days, visits, GPS pings, orders and
 TA/DA claims — enough to exercise every coverage state (COVERED, SS_ONLY, LEADS_ONLY,
 UNTOUCHED).
+
+## Orders
+
+One table carries all three levels of the chain (company → super stockist → distributor →
+shop). Field orders arrive with salesmen's visits; the admin places the rest from **Orders →
+New order**. Every order is priced on the server from the product list at its level's tier
+(SS price, distributor price, retailer price); a line is whole cases plus loose units, and
+keeps the rate it was placed at when prices change later. Order numbers are `JF-YYMM-####`,
+sequential per IST month.
+
+Status runs Placed → Confirmed → Dispatched → Delivered. The admin can skip ahead (record a
+delivery that was never confirmed) but never go back, and can cancel anything not yet
+delivered, with a reason. Every change is logged with who and when, and concurrent changes
+cannot both win. A distributor can only buy from its own super stockist.
 
 ## Salesman field app (PWA)
 

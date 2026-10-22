@@ -169,18 +169,3 @@ export function TagList({
     </Card>
   );
 }
-
-/**
- * Order and visit history arrive with Phases 4 and 5. Until then the detail
- * pages say so explicitly rather than showing an empty table that looks broken.
- */
-export function HistoryPlaceholder({ title, phase }: { title: string; phase: string }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
-        <CardDescription>Arrives in {phase}.</CardDescription>
-      </CardHeader>
-    </Card>
-  );
-}

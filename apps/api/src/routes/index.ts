@@ -9,6 +9,7 @@ import {
   visitsRouter,
   workdaysRouter,
 } from '../modules/field/field.routes';
+import { ordersRouter, productsRouter } from '../modules/orders/orders.routes';
 import {
   distributorsRouter,
   retailersRouter,
@@ -35,4 +36,6 @@ apiV1Router.use('/workdays', workdaysRouter);
 apiV1Router.use('/visits', visitsRouter);
 apiV1Router.use('/field', fieldRouter);
 apiV1Router.use('/uploads', uploadsRouter);
+apiV1Router.use('/orders', ordersRouter);
+apiV1Router.use('/products', productsRouter);
 apiV1Router.use('/import', importRouter);

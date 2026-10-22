@@ -21,11 +21,13 @@ import { istDayEndUtc, istDayStartUtc } from '../../lib/dates';
 import { clampDeviceTime, haversineMeters } from '../../lib/geo';
 import { nextOrderNumber } from '../../lib/orderNumber';
 import { assertOwnPath } from '../../lib/storage';
+import { priceLines } from '../orders/orders.service';
 import { territoryOf } from './territory';
 import { requireWritableDay } from './workdays.service';
 
 const include = {
   town: { select: { id: true, name: true } },
+  salesman: { select: { id: true, name: true } },
   retailer: { select: { id: true, shopName: true, addedBySalesmanId: true } },
   order: {
     select: { id: true, orderNumber: true, totalAmount: true, _count: { select: { items: true } } },
@@ -46,6 +48,7 @@ function toItem(row: Row): VisitListItem {
     notes: row.notes,
     distanceFromShopMeters: row.distanceFromShopMeters,
     isFarFromShop: (row.distanceFromShopMeters ?? 0) > VISIT_DISTANCE_FLAG_M,
+    salesman: row.salesman,
     town: row.town,
     shop: {
       id: row.retailer?.id ?? null,
@@ -63,33 +66,6 @@ function toItem(row: Row): VisitListItem {
       : null,
     photos: row.photos.map((p) => ({ id: p.id, path: p.url, type: p.type })),
   };
-}
-
-/** Prices a field order from the product master; the client never sends money. */
-async function priceOrder(input: NonNullable<CreateVisitInput['order']>) {
-  const ids = [...new Set(input.items.map((i) => i.productId))];
-  const products = await prisma.product.findMany({
-    where: { id: { in: ids }, isActive: true, deletedAt: null },
-  });
-  if (products.length !== ids.length)
-    throw ApiException.badRequest('One or more products are not available');
-  const byId = new Map(products.map((p) => [p.id, p]));
-
-  let total = new Prisma.Decimal(0);
-  const items = input.items.map((line) => {
-    const product = byId.get(line.productId)!;
-    const units = line.qtyCases * product.unitsPerCase + line.qtyUnits;
-    const amount = product.retailerPrice.mul(units).toDecimalPlaces(2);
-    total = total.add(amount);
-    return {
-      productId: product.id,
-      qtyCases: line.qtyCases,
-      qtyUnits: line.qtyUnits,
-      rate: product.retailerPrice,
-      amount,
-    };
-  });
-  return { items, total };
 }
 
 export async function create(salesmanId: string, input: CreateVisitInput): Promise<VisitListItem> {
@@ -144,7 +120,9 @@ export async function create(salesmanId: string, input: CreateVisitInput): Promi
     if (!distributor) throw ApiException.badRequest('That distributor is not active');
   }
 
-  const priced = input.order ? await priceOrder(input.order) : null;
+  const priced = input.order
+    ? await priceLines(OrderLevel.DISTRIBUTOR_TO_RETAILER, input.order.items)
+    : null;
 
   const write = () =>
     prisma.$transaction(async (tx) => {
@@ -304,6 +282,7 @@ export async function list(
     where: {
       ...(salesmanId ? { salesmanId } : {}),
       ...(query.workDayId ? { workDayId: query.workDayId } : {}),
+      ...(query.retailerId ? { retailerId: query.retailerId } : {}),
       ...(query.date
         ? { checkInAt: { gte: istDayStartUtc(query.date), lt: istDayEndUtc(query.date) } }
         : {}),

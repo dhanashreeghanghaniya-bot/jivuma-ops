@@ -25,7 +25,7 @@ class ReadTimeout extends Error {}
  * working offline. Server errors (4xx/5xx) are real answers and are not
  * papered over. With the device reporting no connection, skip the wait.
  */
-async function withOfflineCopy<T extends object>(
+export async function withOfflineCopy<T extends object>(
   key: string,
   load: () => Promise<T>,
 ): Promise<T & { fromCache?: boolean }> {

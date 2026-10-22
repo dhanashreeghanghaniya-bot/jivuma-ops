@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
+import { OrderHistoryCard } from '@/features/orders/order-history';
 import Link from 'next/link';
 import { Pencil } from 'lucide-react';
 import { PartnerStatus } from '@juma/shared';
@@ -12,13 +13,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/data-states';
 import { ApiRequestError } from '@/lib/api-client';
 import { formatDate, formatINR, formatNumber, formatPhone } from '@/lib/format';
 import { useDistributor, useRetailers } from '@/features/partners/api';
-import {
-  ContactCard,
-  DetailHeader,
-  HistoryPlaceholder,
-  StatCard,
-  TagList,
-} from '@/features/partners/partner-detail';
+import { ContactCard, DetailHeader, StatCard, TagList } from '@/features/partners/partner-detail';
 import { DistributorDialog } from '@/features/partners/distributor-dialog';
 
 export default function DistributorDetailPage() {
@@ -91,11 +86,11 @@ export default function DistributorDetailPage() {
             <CardContent className="flex flex-wrap items-center justify-between gap-2">
               <Link
                 href={`/admin/partners/super-stockists/${data.superStockist.id}`}
-                className="font-medium text-primary underline-offset-2 hover:underline"
+                className="text-primary font-medium underline-offset-2 hover:underline"
               >
                 {data.superStockist.firmName}
               </Link>
-              <span className="text-sm tabular-nums text-muted-foreground">
+              <span className="text-muted-foreground text-sm tabular-nums">
                 {formatPhone(data.superStockist.phone)}
               </span>
             </CardContent>
@@ -113,7 +108,7 @@ export default function DistributorDetailPage() {
                 <CardTitle className="text-base">Notes</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="whitespace-pre-wrap text-sm text-muted-foreground">{data.notes}</p>
+                <p className="text-muted-foreground whitespace-pre-wrap text-sm">{data.notes}</p>
               </CardContent>
             </Card>
           ) : null}
@@ -124,7 +119,7 @@ export default function DistributorDetailPage() {
         <CardHeader>
           <CardTitle className="text-base">
             Shops supplied{' '}
-            <span className="font-normal text-muted-foreground">
+            <span className="text-muted-foreground font-normal">
               ({downstream.data?.meta?.total ?? 0})
             </span>
           </CardTitle>
@@ -141,17 +136,17 @@ export default function DistributorDetailPage() {
                   <div className="min-w-0">
                     <Link
                       href={`/admin/partners/retailers/${r.id}`}
-                      className="font-medium text-primary underline-offset-2 hover:underline"
+                      className="text-primary font-medium underline-offset-2 hover:underline"
                     >
                       {r.shopName}
                     </Link>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       {r.town.name} &middot; {r.category}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
                     {r.isVerified ? null : <Badge variant="warning">To verify</Badge>}
-                    <span className="text-sm tabular-nums text-muted-foreground">
+                    <span className="text-muted-foreground text-sm tabular-nums">
                       {formatPhone(r.phone)}
                     </span>
                   </div>
@@ -162,7 +157,7 @@ export default function DistributorDetailPage() {
         </CardContent>
       </Card>
 
-      <HistoryPlaceholder title="Order history" phase="Phase 5" />
+      <OrderHistoryCard partner={{ distributorId: data.id }} />
 
       <DistributorDialog open={editing} onOpenChange={setEditing} editing={data} />
     </div>

@@ -234,5 +234,6 @@ export const listVisitsQuerySchema = z.object({
     .optional(),
   workDayId: idSchema.optional(),
   salesmanId: idSchema.optional(),
+  retailerId: idSchema.optional(),
 });
 export type ListVisitsQuery = z.infer<typeof listVisitsQuerySchema>;

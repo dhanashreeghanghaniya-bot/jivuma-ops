@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
+import { OrderHistoryCard } from '@/features/orders/order-history';
 import Link from 'next/link';
 import { Pencil } from 'lucide-react';
 import { PartnerStatus } from '@juma/shared';
@@ -12,13 +13,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/data-states';
 import { ApiRequestError } from '@/lib/api-client';
 import { formatDate, formatNumber, formatPhone } from '@/lib/format';
 import { useDistributors, useSuperStockist } from '@/features/partners/api';
-import {
-  ContactCard,
-  DetailHeader,
-  HistoryPlaceholder,
-  StatCard,
-  TagList,
-} from '@/features/partners/partner-detail';
+import { ContactCard, DetailHeader, StatCard, TagList } from '@/features/partners/partner-detail';
 import { SuperStockistDialog } from '@/features/partners/super-stockist-dialog';
 
 export default function SuperStockistDetailPage() {
@@ -28,10 +23,7 @@ export default function SuperStockistDetailPage() {
 
   const { data, isPending, isError, error, refetch } = useSuperStockist(id);
   // Downstream distributors, i.e. who this super stockist supplies.
-  const downstream = useDistributors(
-    { page: 1, superStockistId: id ?? undefined },
-    Boolean(id),
-  );
+  const downstream = useDistributors({ page: 1, superStockistId: id ?? undefined }, Boolean(id));
 
   if (isPending) return <LoadingState />;
   if (isError || !data) {
@@ -106,7 +98,7 @@ export default function SuperStockistDetailPage() {
                 <CardTitle className="text-base">Notes</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="whitespace-pre-wrap text-sm text-muted-foreground">{data.notes}</p>
+                <p className="text-muted-foreground whitespace-pre-wrap text-sm">{data.notes}</p>
               </CardContent>
             </Card>
           ) : null}
@@ -117,7 +109,7 @@ export default function SuperStockistDetailPage() {
         <CardHeader>
           <CardTitle className="text-base">
             Distributors supplied{' '}
-            <span className="font-normal text-muted-foreground">
+            <span className="text-muted-foreground font-normal">
               ({downstream.data?.items.length ?? 0})
             </span>
           </CardTitle>
@@ -134,15 +126,15 @@ export default function SuperStockistDetailPage() {
                   <div className="min-w-0">
                     <Link
                       href={`/admin/partners/distributors/${d.id}`}
-                      className="font-medium text-primary underline-offset-2 hover:underline"
+                      className="text-primary font-medium underline-offset-2 hover:underline"
                     >
                       {d.firmName}
                     </Link>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       {d.town.name} &middot; {d.counts.retailers} shops
                     </p>
                   </div>
-                  <span className="text-sm tabular-nums text-muted-foreground">
+                  <span className="text-muted-foreground text-sm tabular-nums">
                     {formatPhone(d.phone)}
                   </span>
                 </li>
@@ -152,7 +144,7 @@ export default function SuperStockistDetailPage() {
         </CardContent>
       </Card>
 
-      <HistoryPlaceholder title="Order history" phase="Phase 5" />
+      <OrderHistoryCard partner={{ superStockistId: data.id }} />
 
       <SuperStockistDialog open={editing} onOpenChange={setEditing} editing={data} />
     </div>

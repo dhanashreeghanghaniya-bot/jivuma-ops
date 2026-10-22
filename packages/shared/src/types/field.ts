@@ -124,6 +124,7 @@ export interface VisitListItem {
   notes: string | null;
   distanceFromShopMeters: number | null;
   isFarFromShop: boolean;
+  salesman: { id: string; name: string };
   town: { id: string; name: string };
   shop: { id: string | null; name: string; isNew: boolean };
   order: { id: string; orderNumber: string; totalAmount: string; itemCount: number } | null;
