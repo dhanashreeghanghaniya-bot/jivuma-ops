@@ -3,7 +3,7 @@
 Sales and distribution operations for Juma Food Products across Gujarat, covering the
 chain Company → Super Stockist → Distributor → Retailer.
 
-`SPEC.md` is the source of truth for scope and phasing. **Phase 1 (Foundation) is complete.**
+`SPEC.md` is the source of truth for scope and phasing. **Phases 1–3 (Foundation, Geography & partners, Leads) are complete.**
 
 ## Layout
 
@@ -17,7 +17,7 @@ packages/shared Enums, Zod schemas and Gujarat district constants shared by both
 
 - Node.js 20+ (this machine runs 24.22.0 from `C:\tools\nodejs`)
 - pnpm 12 (`corepack enable pnpm`)
-- Docker Desktop, for the Postgres container
+- A Supabase project (the only database; there is no local Postgres)
 
 ## First run
 
@@ -25,8 +25,8 @@ packages/shared Enums, Zod schemas and Gujarat district constants shared by both
 pnpm install
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
-# point DATABASE_URL / DIRECT_URL at a database (see below)
-pnpm db:migrate
+# fill DATABASE_URL / DIRECT_URL from Supabase (see below)
+pnpm db:deploy               # apply committed migrations to Supabase
 pnpm db:seed
 pnpm dev                      # API on :4000, web on :3000
 ```
@@ -52,22 +52,18 @@ DATABASE_URL="postgresql://postgres.<ref>:<password>@aws-0-ap-south-1.pooler.sup
 DIRECT_URL="postgresql://postgres.<ref>:<password>@aws-0-ap-south-1.pooler.supabase.com:5432/postgres"
 ```
 
-Nothing else changes, and Docker is not needed at all in this mode.
+Use the **pooler** hosts for both. The direct `db.<ref>.supabase.co` host is IPv6-only and
+unreachable from most networks.
 
-Data access goes through the Express API only — no Supabase Auth, no Row Level Security,
-and no Supabase JS client in the browser. The service-role key belongs in the API's env and
-must never reach the frontend.
+Data access goes through the Express API only — no Supabase Auth and no Supabase JS client
+in the browser. The service-role key belongs in the API's env and must never reach the
+frontend.
 
-### Local Docker (optional)
-
-```bash
-docker compose up -d          # Postgres 16 on host port 55432
-```
-
-The container publishes **55432**, not 5432: host port 5432 is frequently already taken by
-a WSL-hosted Postgres that claims loopback through the WSL port relay and silently shadows
-Docker's binding. Connecting to 5432 appears to work and then fails password
-authentication against someone else's database.
+Supabase also serves the `public` schema over its REST API to anyone holding the (public)
+anon/publishable key. The `lock_down_supabase_data_api` migration closes that: RLS is on for
+every table with no policies, and the `anon` / `authenticated` roles have no grants, now or on
+tables added later. The API connects as the table owner and is unaffected. The Supabase
+security advisor will list "RLS enabled, no policy" for each table — that is the intent.
 
 ### Behind a TLS-intercepting proxy
 
@@ -125,7 +121,8 @@ Either way an explanatory banner appears under the map saying which file or key 
 | `pnpm build` | Type-checked production build of all three packages |
 | `pnpm typecheck` / `pnpm lint` | Static checks across the workspace |
 | `pnpm test` | Vitest suite (API) |
-| `pnpm db:migrate` | Applies Prisma migrations |
+| `pnpm db:deploy` | Applies committed migrations to Supabase |
+| `pnpm db:migrate` | Creates a new migration after a schema change |
 | `pnpm db:seed` | Idempotent demo data — safe to re-run |
 | `pnpm db:studio` | Prisma Studio |
 

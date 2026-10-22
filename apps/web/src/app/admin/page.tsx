@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { useDistrictsMap, useMapMarkers } from '@/features/geo/api';
 import { DistrictGrid } from '@/features/map/district-grid';
 import { DistrictPanel } from '@/features/map/district-panel';
+import { OverdueFollowUpsCard } from '@/features/leads/overdue-widget';
 import {
   COVERAGE_ORDER,
   COVERAGE_STYLES,
@@ -237,6 +238,8 @@ export default function AdminDashboardPage() {
           </div>
         ) : null}
       </Card>
+
+      <OverdueFollowUpsCard />
 
       <DistrictPanel
         districtId={selectedDistrictId}

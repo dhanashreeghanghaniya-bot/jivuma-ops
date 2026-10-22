@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authRouter } from '../modules/auth/auth.routes';
 import { geoRouter } from '../modules/geo/geo.routes';
 import { importRouter } from '../modules/import/import.routes';
+import { leadsRouter } from '../modules/leads/leads.routes';
 import {
   distributorsRouter,
   retailersRouter,
@@ -23,4 +24,5 @@ apiV1Router.use('/geo', geoRouter);
 apiV1Router.use('/super-stockists', superStockistsRouter);
 apiV1Router.use('/distributors', distributorsRouter);
 apiV1Router.use('/retailers', retailersRouter);
+apiV1Router.use('/leads', leadsRouter);
 apiV1Router.use('/import', importRouter);

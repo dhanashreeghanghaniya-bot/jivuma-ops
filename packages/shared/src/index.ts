@@ -6,6 +6,8 @@ export * from './schemas/user';
 export * from './schemas/geo';
 export * from './schemas/partners';
 export * from './schemas/import';
+export * from './schemas/leads';
 export * from './types/api';
 export * from './types/geo';
 export * from './types/partners';
+export * from './types/leads';

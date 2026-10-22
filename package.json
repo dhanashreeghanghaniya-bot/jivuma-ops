@@ -14,10 +14,9 @@
     "typecheck": "turbo run typecheck",
     "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,json,md,yml,yaml}\"",
-    "db:up": "docker compose up -d",
-    "db:down": "docker compose down",
     "db:generate": "pnpm --filter @juma/api db:generate",
     "db:migrate": "pnpm --filter @juma/api db:migrate",
+    "db:deploy": "pnpm --filter @juma/api db:deploy",
     "db:seed": "pnpm --filter @juma/shared build && pnpm --filter @juma/api db:seed",
     "db:reset": "pnpm --filter @juma/api db:reset",
     "db:studio": "pnpm --filter @juma/api db:studio"
