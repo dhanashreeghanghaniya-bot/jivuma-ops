@@ -147,10 +147,24 @@ Either way an explanatory banner appears under the map saying which file or key 
 | `pnpm build` | Type-checked production build of all three packages |
 | `pnpm typecheck` / `pnpm lint` | Static checks across the workspace |
 | `pnpm test` | Vitest suite (API) |
+| `pnpm --filter @juma/web e2e` | Playwright smoke tests: admin map and a salesman's day (see below) |
 | `pnpm db:deploy` | Applies committed migrations to Supabase |
 | `pnpm db:migrate` | Creates a new migration after a schema change |
 | `pnpm db:seed` | Idempotent demo data — safe to re-run |
 | `pnpm db:studio` | Prisma Studio |
+
+## Smoke tests (Playwright)
+
+`pnpm --filter @juma/web e2e` runs two flows in the installed Chrome against the real API and
+database: the admin dashboard with a district panel, and a salesman starting the day, visiting a
+shop, ending and submitting the day (on a phone-sized screen with the GPS position set to a
+Rajkot shop). It reuses the dev servers if they are running, otherwise starts them.
+
+The salesman flow uses a dedicated **E2E Salesman** (`+919812300009`): global setup creates or
+reactivates him and clears his work, and teardown clears it again and deactivates him, so he
+never shows in payroll or the sales-team view. Never run the tests against the production
+database. On a machine without Chrome, run `npx playwright install chromium` and set
+`PLAYWRIGHT_CHANNEL=chromium`.
 
 ## Seeded logins
 

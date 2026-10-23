@@ -8,7 +8,8 @@
     "start": "next start -p 3000",
     "icons": "node scripts/generate-icons.mjs",
     "lint": "eslint src",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@googlemaps/markerclusterer": "^2.6.2",
@@ -35,6 +36,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "1.49.1",
     "@types/google.maps": "^3.66.7",
     "@types/node": "^22.10.2",
     "@types/react": "^18.3.17",
