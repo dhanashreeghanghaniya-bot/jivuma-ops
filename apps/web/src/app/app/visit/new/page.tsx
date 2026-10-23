@@ -41,12 +41,8 @@ import { formatINR, formatPhone } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { useCurrentDay, useFieldBootstrap } from '@/features/field/api';
 import { LocationHelp } from '@/features/field/components';
-import {
-  CATEGORY_LABELS,
-  NO_ORDER_REASONS,
-  OUTCOME_LABELS,
-  PHOTO_TYPE_LABELS,
-} from '@/features/field/labels';
+import { useT } from '@/lib/i18n';
+import { CATEGORY_LABELS, NO_ORDER_REASONS } from '@/features/field/labels';
 import {
   distanceMeters,
   formatDistance,
@@ -95,11 +91,12 @@ function Stepper({
   onChange: (v: number) => void;
   label: string;
 }) {
+  const t = useT();
   return (
     <div className="flex items-center gap-1">
       <button
         type="button"
-        aria-label={`Fewer ${label}`}
+        aria-label={t('visit.fewer', { label })}
         onClick={() => onChange(Math.max(0, value - 1))}
         className="flex h-10 w-10 items-center justify-center rounded-md border"
       >
@@ -114,7 +111,7 @@ function Stepper({
       />
       <button
         type="button"
-        aria-label={`More ${label}`}
+        aria-label={t('visit.more', { label })}
         onClick={() => onChange(value + 1)}
         className="flex h-10 w-10 items-center justify-center rounded-md border"
       >
@@ -173,6 +170,7 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
   const router = useRouter();
   const params = useSearchParams();
   const checkIn = useCheckIn();
+  const t = useT();
 
   const [clientUuid] = useState(newUuid);
   const [retailerId, setRetailerId] = useState<string | null>(params.get('retailerId'));
@@ -189,7 +187,7 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const towns = useMemo(() => new Map(bootstrap.towns.map((t) => [t.id, t])), [bootstrap]);
+  const towns = useMemo(() => new Map(bootstrap.towns.map((town) => [town.id, town])), [bootstrap]);
   const districts = useMemo(() => new Map(bootstrap.districts.map((d) => [d.id, d])), [bootstrap]);
   const retailer = bootstrap.retailers.find((r) => r.id === retailerId) ?? null;
 
@@ -241,22 +239,22 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
   };
 
   const validate = (): string | null => {
-    if (!checkIn.fix) return 'Waiting for your location';
-    if (!retailer && !addingShop) return 'Pick a shop or add a new one';
+    if (!checkIn.fix) return t('visit.err.location');
+    if (!retailer && !addingShop) return t('visit.err.shop');
     if (addingShop) {
-      if (shop.shopName.trim().length < 2) return 'Enter the shop name';
-      if (shop.ownerName.trim().length < 2) return "Enter the owner's name";
+      if (shop.shopName.trim().length < 2) return t('visit.err.shopName');
+      if (shop.ownerName.trim().length < 2) return t('visit.err.owner');
       if (!/^(\+91)?[6-9]\d{9}$/.test(shop.phone.replace(/[\s-]/g, '')))
-        return 'Enter a valid 10-digit mobile';
-      if (!shop.townId) return 'Pick the town';
-      if (shop.address.trim().length < 3) return 'Enter the address';
-      if (!shop.distributorId) return 'Pick the distributor who will supply this shop';
+        return t('common.validMobile');
+      if (!shop.townId) return t('visit.err.town');
+      if (shop.address.trim().length < 3) return t('visit.err.address');
+      if (!shop.distributorId) return t('visit.err.supplier');
     }
-    if (!outcome) return 'Pick an outcome';
-    if (outcome === 'NO_ORDER' && !noOrderReason) return 'Say why there was no order';
+    if (!outcome) return t('visit.err.outcome');
+    if (outcome === 'NO_ORDER' && !noOrderReason) return t('visit.err.reason');
     if (outcome === 'ORDER_TAKEN') {
-      if (!distributorId) return 'Pick the distributor who will deliver';
-      if (lines.length === 0) return 'Add at least one product';
+      if (!distributorId) return t('visit.err.deliverer');
+      if (lines.length === 0) return t('visit.err.products');
     }
     return null;
   };
@@ -329,14 +327,10 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
             : [];
         }),
       });
-      toast.success(
-        navigator.onLine
-          ? 'Visit saved'
-          : 'Visit saved on this phone. It will sync when you are online.',
-      );
+      toast.success(navigator.onLine ? t('visit.saved') : t('visit.savedOffline'));
       router.push('/app');
     } catch {
-      toast.error('Could not save on this phone. Is storage full?');
+      toast.error(t('visit.storageFull'));
       setSaving(false);
     }
   };
@@ -344,12 +338,12 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
   return (
     <div className="space-y-4 pb-4">
       <div className="flex items-center gap-2">
-        <Button asChild variant="ghost" size="icon" aria-label="Back">
+        <Button asChild variant="ghost" size="icon" aria-label={t('common.back')}>
           <Link href="/app">
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
-        <h1 className="text-xl font-semibold tracking-tight">New visit</h1>
+        <h1 className="text-xl font-semibold tracking-tight">{t('visit.title')}</h1>
       </div>
 
       {/* Check-in */}
@@ -369,13 +363,13 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
             )}
             {checkIn.fix ? (
               <span>
-                Checked in ±{checkIn.fix.accuracyM} m
+                {t('visit.checkedIn', { m: checkIn.fix.accuracyM })}
                 {checkIn.fix.accuracyM > GPS_ACCURACY_LIMIT_M ? (
-                  <span className="text-amber-700"> (weak)</span>
+                  <span className="text-amber-700"> {t('visit.weak')}</span>
                 ) : null}
               </span>
             ) : (
-              'Getting your location...'
+              t('common.gettingLocation')
             )}
           </span>
           <Button
@@ -384,7 +378,7 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
             onClick={() => void checkIn.locate()}
             disabled={checkIn.locating}
           >
-            Refresh
+            {t('common.refresh')}
           </Button>
         </div>
       )}
@@ -392,7 +386,7 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
       {/* Shop */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Shop</CardTitle>
+          <CardTitle className="text-base">{t('visit.shop')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {retailer && !addingShop ? (
@@ -411,7 +405,7 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
                   href={navigateHref(retailer.lat, retailer.lng)}
                   target="_blank"
                   rel="noreferrer"
-                  aria-label="Navigate"
+                  aria-label={t('visit.navigate')}
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border"
                 >
                   <Navigation className="h-4 w-4" />
@@ -426,12 +420,14 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
                       : 'text-muted-foreground',
                   )}
                 >
-                  You are {formatDistance(distanceToShop)} from this shop&apos;s saved location
-                  {distanceToShop > VISIT_DISTANCE_FLAG_M ? '. The admin will see this.' : '.'}
+                  {t(
+                    distanceToShop > VISIT_DISTANCE_FLAG_M ? 'visit.distanceFar' : 'visit.distance',
+                    { d: formatDistance(distanceToShop) },
+                  )}
                 </p>
               ) : null}
               <Button variant="outline" size="sm" onClick={() => setRetailerId(null)}>
-                Change shop
+                {t('visit.changeShop')}
               </Button>
             </div>
           ) : null}
@@ -443,7 +439,7 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search shop, owner or phone"
+                  placeholder={t('visit.search')}
                   className="h-12 pl-9 text-base"
                 />
               </div>
@@ -452,16 +448,16 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">All towns</SelectItem>
-                  {bootstrap.towns.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name} · {districts.get(t.districtId)?.name}
+                  <SelectItem value="ALL">{t('visit.allTowns')}</SelectItem>
+                  {bootstrap.towns.map((town) => (
+                    <SelectItem key={town.id} value={town.id}>
+                      {town.name} · {districts.get(town.districtId)?.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <div className="max-h-80 space-y-2 overflow-y-auto">
-                {shopList.length === 0 ? <EmptyState message="No shops match." /> : null}
+                {shopList.length === 0 ? <EmptyState message={t('visit.noMatch')} /> : null}
                 {shopList.map(({ r, d }) => (
                   <button
                     key={r.id}
@@ -473,7 +469,7 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
                       <span className="block truncate font-medium">{r.shopName}</span>
                       <span className="text-muted-foreground block truncate text-xs">
                         {r.ownerName} · {towns.get(r.townId)?.name}
-                        {r.isVerified ? '' : ' · unverified'}
+                        {r.isVerified ? '' : ` · ${t('visit.unverified')}`}
                       </span>
                     </span>
                     {d !== null ? (
@@ -486,7 +482,7 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
               </div>
               <Button variant="outline" className="h-12 w-full" onClick={() => setAddingShop(true)}>
                 <Store className="h-4 w-4" />
-                Add new shop
+                {t('visit.addShop')}
               </Button>
             </>
           ) : null}
@@ -494,7 +490,7 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
           {addingShop ? (
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label htmlFor="shop-name">Shop name</Label>
+                <Label htmlFor="shop-name">{t('visit.shopName')}</Label>
                 <Input
                   id="shop-name"
                   className="h-12"
@@ -503,7 +499,7 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="shop-owner">Owner</Label>
+                <Label htmlFor="shop-owner">{t('visit.owner')}</Label>
                 <Input
                   id="shop-owner"
                   className="h-12"
@@ -512,7 +508,7 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="shop-phone">Mobile</Label>
+                <Label htmlFor="shop-phone">{t('common.mobile')}</Label>
                 <Input
                   id="shop-phone"
                   className="h-12"
@@ -523,7 +519,7 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Category</Label>
+                <Label>{t('visit.category')}</Label>
                 <div className="flex flex-wrap gap-2">
                   {(Object.keys(CATEGORY_LABELS) as RetailerCategory[]).map((c) => (
                     <Chip
@@ -531,31 +527,31 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
                       active={shop.category === c}
                       onClick={() => setShop({ ...shop, category: c })}
                     >
-                      {CATEGORY_LABELS[c]}
+                      {t(`shopCat.${c}`)}
                     </Chip>
                   ))}
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label>Town</Label>
+                <Label>{t('common.town')}</Label>
                 <Select
                   value={shop.townId}
                   onValueChange={(townId) => setShop({ ...shop, townId })}
                 >
                   <SelectTrigger className="h-12">
-                    <SelectValue placeholder="Pick town" />
+                    <SelectValue placeholder={t('common.pickTown')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {bootstrap.towns.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.name} · {districts.get(t.districtId)?.name}
+                    {bootstrap.towns.map((town) => (
+                      <SelectItem key={town.id} value={town.id}>
+                        {town.name} · {districts.get(town.districtId)?.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="shop-address">Address</Label>
+                <Label htmlFor="shop-address">{t('visit.address')}</Label>
                 <Input
                   id="shop-address"
                   className="h-12"
@@ -564,13 +560,13 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Supplied by</Label>
+                <Label>{t('visit.suppliedBy')}</Label>
                 <Select
                   value={shop.distributorId}
                   onValueChange={(id) => setShop({ ...shop, distributorId: id })}
                 >
                   <SelectTrigger className="h-12">
-                    <SelectValue placeholder="Pick distributor" />
+                    <SelectValue placeholder={t('common.pickDistributor')} />
                   </SelectTrigger>
                   <SelectContent>
                     {servingDistributors.map((d) => (
@@ -582,9 +578,9 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
                 </Select>
               </div>
               <p className="bg-muted text-muted-foreground rounded-md px-3 py-2 text-xs">
-                The shop is pinned at your current GPS position
-                {checkIn.fix ? ` (±${checkIn.fix.accuracyM} m)` : ''}. Stand at the shop when you
-                save. The admin verifies new shops before they count as active.
+                {t('visit.pinNote', {
+                  acc: checkIn.fix ? ` (±${checkIn.fix.accuracyM} m)` : '',
+                })}
               </p>
               <Button
                 variant="ghost"
@@ -595,7 +591,7 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
                   if (outcome === 'NEW_SHOP_ADDED') setOutcome(null);
                 }}
               >
-                Pick an existing shop instead
+                {t('visit.pickExisting')}
               </Button>
             </div>
           ) : null}
@@ -606,25 +602,26 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
       {retailer || addingShop ? (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Outcome</CardTitle>
+            <CardTitle className="text-base">{t('visit.outcome')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
               {outcomes.map((o) => (
                 <Chip key={o} active={outcome === o} onClick={() => setOutcome(o)}>
-                  {OUTCOME_LABELS[o]}
+                  {t(`outcome.${o}`)}
                 </Chip>
               ))}
             </div>
             {outcome === 'NO_ORDER' ? (
               <div className="flex flex-wrap gap-2">
-                {NO_ORDER_REASONS.map((reason) => (
+                {/* The English reason is what is stored, so the admin reads one language. */}
+                {NO_ORDER_REASONS.map((reason, index) => (
                   <Chip
                     key={reason}
                     active={noOrderReason === reason}
                     onClick={() => setNoOrderReason(reason)}
                   >
-                    {reason}
+                    {t(`noOrder.${index as 0 | 1 | 2 | 3 | 4 | 5}`)}
                   </Chip>
                 ))}
               </div>
@@ -637,14 +634,14 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
       {outcome === 'ORDER_TAKEN' ? (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Order</CardTitle>
+            <CardTitle className="text-base">{t('visit.order')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-1.5">
-              <Label>Delivered by</Label>
+              <Label>{t('visit.deliveredBy')}</Label>
               <Select value={distributorId} onValueChange={setDistributorId}>
                 <SelectTrigger className="h-12">
-                  <SelectValue placeholder="Pick distributor" />
+                  <SelectValue placeholder={t('common.pickDistributor')} />
                 </SelectTrigger>
                 <SelectContent>
                   {servingDistributors.map((d) => (
@@ -665,24 +662,24 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
                     <div className="min-w-0">
                       <p className="text-sm font-medium">{p.name}</p>
                       <p className="text-muted-foreground text-xs">
-                        {p.packSize} · {p.unitsPerCase}/case · {formatINR(p.retailerPrice, true)}
-                        /unit
+                        {p.packSize} · {t('visit.perCase', { n: p.unitsPerCase })} ·{' '}
+                        {t('visit.perUnit', { price: formatINR(p.retailerPrice, true) })}
                       </p>
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="text-muted-foreground flex items-center gap-2 text-xs">
-                      Cases{' '}
+                      {t('visit.cases')}{' '}
                       <Stepper
-                        label={`cases of ${p.name}`}
+                        label={t('visit.casesOf', { name: p.name })}
                         value={q.cases}
                         onChange={(cases) => set({ cases })}
                       />
                     </div>
                     <div className="text-muted-foreground flex items-center gap-2 text-xs">
-                      Units{' '}
+                      {t('visit.units')}{' '}
                       <Stepper
-                        label={`units of ${p.name}`}
+                        label={t('visit.unitsOf', { name: p.name })}
                         value={q.units}
                         onChange={(units) => set({ units })}
                       />
@@ -692,9 +689,7 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
               );
             })}
             <div className="bg-muted flex items-center justify-between rounded-md px-3 py-3">
-              <span className="text-sm">
-                Total · {lines.length} product{lines.length === 1 ? '' : 's'}
-              </span>
+              <span className="text-sm">{t('visit.totalProducts', { n: lines.length })}</span>
               <span className="text-lg font-semibold tabular-nums">{formatINR(orderTotal)}</span>
             </div>
           </CardContent>
@@ -705,14 +700,14 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
       {retailer || addingShop ? (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Photos</CardTitle>
+            <CardTitle className="text-base">{t('visit.photos')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-wrap gap-3">
               {PHOTO_SLOTS.map((type) => (
                 <PhotoCapture
                   key={type}
-                  label={PHOTO_TYPE_LABELS[type]}
+                  label={t(`photo.${type}`)}
                   fix={checkIn.fix}
                   photo={photos[type] ?? null}
                   onChange={(photo) => setPhotos({ ...photos, [type]: photo ?? undefined })}
@@ -720,7 +715,7 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
               ))}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes">{t('common.notes')}</Label>
               <textarea
                 id="notes"
                 rows={3}
@@ -740,7 +735,7 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
         disabled={saving}
       >
         {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
-        Save visit
+        {t('visit.save')}
       </Button>
     </div>
   );
@@ -749,25 +744,23 @@ function VisitForm({ bootstrap, workDayId }: { bootstrap: FieldBootstrap; workDa
 function NewVisitContent() {
   const current = useCurrentDay();
   const bootstrap = useFieldBootstrap();
+  const t = useT();
 
   if (current.isPending || bootstrap.isPending) return <LoadingState />;
   const day = current.data?.day;
   if (!day || current.data?.isStale) {
     return (
       <EmptyState
-        message="Start your day first. Visits unlock once the day has started."
+        message={t('visit.needDay')}
         action={
           <Button asChild>
-            <Link href="/app">Go to Today</Link>
+            <Link href="/app">{t('common.goToday')}</Link>
           </Button>
         }
       />
     );
   }
-  if (!bootstrap.data)
-    return (
-      <EmptyState message="Your shop list is not on this phone yet. Connect once to load it." />
-    );
+  if (!bootstrap.data) return <EmptyState message={t('visit.noShops')} />;
   return <VisitForm bootstrap={bootstrap.data} workDayId={day.id} />;
 }
 

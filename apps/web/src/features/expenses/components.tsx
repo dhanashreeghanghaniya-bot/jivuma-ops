@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { formatDateTime } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useMarkNotifications, useNotifications, useSignedUrls } from './api';
 
@@ -47,14 +48,8 @@ const STATUS_TONE: Record<ExpenseStatus, string> = {
   REJECTED: 'bg-red-100 text-red-900',
 };
 
-export const FLAG_LABELS: Record<ExpenseFlag, string> = {
-  OVER_LIMIT: 'Above policy',
-  BILL_MISSING: 'No bill',
-  KM_ABOVE_DAY: 'Km above day',
-  DUPLICATE: 'Duplicate',
-};
-
 export function ExpenseStatusPill({ status }: { status: ExpenseStatus }) {
+  const t = useT();
   return (
     <span
       className={cn(
@@ -62,12 +57,13 @@ export function ExpenseStatusPill({ status }: { status: ExpenseStatus }) {
         STATUS_TONE[status],
       )}
     >
-      {STATUS_LABELS[status]}
+      {t(`expStatus.${status}`)}
     </span>
   );
 }
 
 export function FlagPills({ flags }: { flags: ExpenseFlag[] }) {
+  const t = useT();
   return (
     <>
       {flags.map((f) => (
@@ -75,7 +71,7 @@ export function FlagPills({ flags }: { flags: ExpenseFlag[] }) {
           key={f}
           className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-900"
         >
-          {FLAG_LABELS[f]}
+          {t(`expFlag.${f}`)}
         </span>
       ))}
     </>
@@ -130,6 +126,7 @@ export function BillThumbs({ paths, size = 'h-14 w-14' }: { paths: string[]; siz
 
 /** Header bell for both apps (SPEC 4.6: "salesman gets a notification"). */
 export function NotificationBell({ align = 'end' }: { align?: 'start' | 'end' }) {
+  const t = useT();
   const { data } = useNotifications();
   const mark = useMarkNotifications();
   const unread = data?.unread ?? 0;
@@ -140,7 +137,7 @@ export function NotificationBell({ align = 'end' }: { align?: 'start' | 'end' })
         <Button
           variant="ghost"
           size="icon"
-          aria-label={`Notifications${unread ? `, ${unread} unread` : ''}`}
+          aria-label={unread ? t('notif.unread', { n: unread }) : t('notif.title')}
           className="relative"
         >
           <Bell className="h-5 w-5" />
@@ -153,20 +150,20 @@ export function NotificationBell({ align = 'end' }: { align?: 'start' | 'end' })
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align} className="w-80 p-0">
         <div className="flex items-center justify-between border-b px-3 py-2">
-          <p className="text-sm font-medium">Notifications</p>
+          <p className="text-sm font-medium">{t('notif.title')}</p>
           {unread > 0 ? (
             <button
               type="button"
               className="text-primary text-xs underline"
               onClick={() => mark.mutate('all')}
             >
-              Mark all read
+              {t('notif.markAll')}
             </button>
           ) : null}
         </div>
         <div className="max-h-96 overflow-y-auto">
           {data?.items.length === 0 ? (
-            <p className="text-muted-foreground px-3 py-6 text-center text-sm">Nothing yet.</p>
+            <p className="text-muted-foreground px-3 py-6 text-center text-sm">{t('notif.none')}</p>
           ) : null}
           {data?.items.map((n) => {
             const body = (

@@ -273,6 +273,12 @@ both take their time from the server clock and their position from the phone, by
   phone, use an HTTPS tunnel or a deployed preview.
 - Location is recorded every 10 minutes only while the app is open on screen, plus on every
   visit, order and lead. Background tracking needs the native app (SPEC 10).
+- **Gujarati:** every salesman screen is available in Gujarati. The switch is on the login page
+  and under Profile; the choice is kept on the phone. Location-permission help always shows both
+  languages. Names, addresses, notifications and error messages from the server stay as
+  entered or in English, and no-order reasons are stored in English so the office reads one
+  language. Strings live in `apps/web/src/lib/i18n` (`field.ts` for the salesman app); a
+  missing Gujarati entry falls back to English. Have a native speaker review the wording.
 
 ## Conventions
 

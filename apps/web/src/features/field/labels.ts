@@ -1,4 +1,4 @@
-import type { DayType, RetailerCategory, VisitOutcome, VisitPhotoType } from '@juma/shared';
+import type { DayType, RetailerCategory, VisitOutcome } from '@juma/shared';
 
 export const DAY_TYPE_LABELS: Record<DayType, string> = {
   HQ: 'HQ',
@@ -6,12 +6,6 @@ export const DAY_TYPE_LABELS: Record<DayType, string> = {
   OUTSTATION: 'Outstation',
   LEAVE: 'Leave',
   HOLIDAY: 'Holiday',
-};
-
-export const DAY_TYPE_HINTS: Partial<Record<DayType, string>> = {
-  HQ: 'Working in your headquarter town',
-  EX_HQ: 'Out of HQ, back home tonight',
-  OUTSTATION: 'Staying overnight away from HQ',
 };
 
 export const OUTCOME_LABELS: Record<VisitOutcome, string> = {
@@ -30,13 +24,6 @@ export const OUTCOME_TONE: Record<VisitOutcome, string> = {
   NEW_SHOP_ADDED: 'bg-violet-100 text-violet-900',
 };
 
-export const PHOTO_TYPE_LABELS: Record<VisitPhotoType, string> = {
-  SHELF: 'Shelf',
-  DISPLAY: 'Display',
-  SHOP_FRONT: 'Shop front',
-  OTHER: 'Other',
-};
-
 export const CATEGORY_LABELS: Record<RetailerCategory, string> = {
   KIRANA: 'Kirana',
   SUPERMARKET: 'Supermarket',
@@ -45,6 +32,7 @@ export const CATEGORY_LABELS: Record<RetailerCategory, string> = {
   OTHER: 'Other',
 };
 
+/** Stored in English whatever the screen language; the screen shows `noOrder.<index>`. */
 export const NO_ORDER_REASONS = [
   'Enough stock',
   'Owner not available',

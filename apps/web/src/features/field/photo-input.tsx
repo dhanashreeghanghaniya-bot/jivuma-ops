@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Camera, Loader2, X } from 'lucide-react';
 import type { GpsFix } from '@juma/shared';
 import { toast } from 'sonner';
+import { useT } from '@/lib/i18n';
 import { compressAndStamp } from './photo';
 
 export interface CapturedPhoto {
@@ -26,6 +27,7 @@ export function PhotoCapture({
   photo: CapturedPhoto | null;
   onChange: (photo: CapturedPhoto | null) => void;
 }) {
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
@@ -47,7 +49,7 @@ export function PhotoCapture({
         capturedAt: capturedAt.toISOString(),
       });
     } catch {
-      toast.error('Could not read that photo. Try again.');
+      toast.error(t('common.photoUnreadable'));
     } finally {
       setBusy(false);
       if (inputRef.current) inputRef.current.value = '';
@@ -69,7 +71,7 @@ export function PhotoCapture({
           <img src={preview} alt={label} className="h-full w-full object-cover" />
           <button
             type="button"
-            aria-label={`Remove ${label}`}
+            aria-label={t('common.removePhoto', { label })}
             onClick={() => onChange(null)}
             className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white"
           >

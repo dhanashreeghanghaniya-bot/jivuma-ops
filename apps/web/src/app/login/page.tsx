@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { ApiRequestError } from '@/lib/api-client';
 import { homePathForRole, useAuth } from '@/lib/auth-context';
 import { useT } from '@/lib/i18n';
+import { LanguageSwitch } from '@/lib/i18n/language-switch';
 
 // The shared schema normalises the phone to E.164; the form keeps raw input.
 type LoginForm = z.input<typeof loginSchema>;
@@ -41,18 +42,17 @@ export default function LoginPage() {
       const signedIn = await login(values.phone, values.password);
       router.replace(homePathForRole(signedIn.role));
     } catch (err) {
-      setFormError(
-        err instanceof ApiRequestError ? err.message : 'Could not sign in. Please try again.',
-      );
+      setFormError(err instanceof ApiRequestError ? err.message : t('auth.signInFailed'));
     }
   });
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+    <main className="bg-muted/40 flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>{t('app.name')}</CardTitle>
           <CardDescription>{t('app.tagline')}</CardDescription>
+          <LanguageSwitch className="mt-2 self-start" />
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4" noValidate>
@@ -67,7 +67,7 @@ export default function LoginPage() {
                 {...register('phone')}
               />
               {errors.phone ? (
-                <p className="text-sm text-destructive">{errors.phone.message}</p>
+                <p className="text-destructive text-sm">{errors.phone.message}</p>
               ) : null}
             </div>
 
@@ -80,12 +80,12 @@ export default function LoginPage() {
                 {...register('password')}
               />
               {errors.password ? (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
+                <p className="text-destructive text-sm">{errors.password.message}</p>
               ) : null}
             </div>
 
             {formError ? (
-              <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <p className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm">
                 {formError}
               </p>
             ) : null}

@@ -11,12 +11,15 @@ import { ErrorState, LoadingState } from '@/components/data-states';
 import { ApiRequestError, api } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { formatDateTime, formatINR } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { withOfflineCopy } from '@/features/field/api';
-import { STATUS_LABELS, StatusPill, formatQty } from '@/features/orders/labels';
+import { StatusPill, useFormatQty } from '@/features/orders/labels';
 
 export default function SalesmanOrderPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const t = useT();
+  const formatQty = useFormatQty();
   const order = useQuery({
     queryKey: ['orders', 'mine', 'detail', id],
     queryFn: () =>
@@ -28,7 +31,7 @@ export default function SalesmanOrderPage() {
   });
 
   const back = (
-    <Button asChild variant="ghost" size="icon" aria-label="Back">
+    <Button asChild variant="ghost" size="icon" aria-label={t('common.back')}>
       <Link href="/app/orders">
         <ArrowLeft className="h-5 w-5" />
       </Link>
@@ -42,9 +45,7 @@ export default function SalesmanOrderPage() {
         {back}
         <ErrorState
           message={
-            order.error instanceof ApiRequestError
-              ? order.error.message
-              : 'Not available offline yet'
+            order.error instanceof ApiRequestError ? order.error.message : t('common.notOfflineYet')
           }
           onRetry={() => void order.refetch()}
         />
@@ -74,7 +75,7 @@ export default function SalesmanOrderPage() {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Items</CardTitle>
+          <CardTitle className="text-base">{t('orders.items')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {o.items.map((item) => (
@@ -82,25 +83,28 @@ export default function SalesmanOrderPage() {
               <div className="min-w-0">
                 <p className="font-medium">{item.product.name}</p>
                 <p className="text-muted-foreground text-xs">
-                  {formatQty(item.qtyCases, item.qtyUnits)} · {formatINR(item.rate, true)}/unit
+                  {formatQty(item.qtyCases, item.qtyUnits)} ·{' '}
+                  {t('visit.perUnit', { price: formatINR(item.rate, true) })}
                 </p>
               </div>
               <p className="tabular-nums">{formatINR(item.amount, true)}</p>
             </div>
           ))}
-          <p className="text-muted-foreground pt-2 text-xs">Delivered by {o.from.name}</p>
+          <p className="text-muted-foreground pt-2 text-xs">
+            {t('orders.deliveredBy', { name: o.from.name })}
+          </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Status</CardTitle>
+          <CardTitle className="text-base">{t('orders.status')}</CardTitle>
         </CardHeader>
         <CardContent>
           <ol className="space-y-3">
             {o.timeline.map((entry) => (
               <li key={entry.id} className="text-sm">
-                <p className="font-medium">{STATUS_LABELS[entry.status]}</p>
+                <p className="font-medium">{t(`orderStatus.${entry.status}`)}</p>
                 <p className="text-muted-foreground text-xs">{formatDateTime(entry.at)}</p>
                 {entry.note ? <p className="text-xs">{entry.note}</p> : null}
               </li>

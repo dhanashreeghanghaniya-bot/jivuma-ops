@@ -1,4 +1,5 @@
 import type { OrderLevel, OrderStatus } from '@juma/shared';
+import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 export const LEVEL_LABELS: Record<OrderLevel, string> = {
@@ -33,6 +34,7 @@ const TONE: Record<OrderStatus, string> = {
 };
 
 export function StatusPill({ status, className }: { status: OrderStatus; className?: string }) {
+  const t = useT();
   return (
     <span
       className={cn(
@@ -41,7 +43,7 @@ export function StatusPill({ status, className }: { status: OrderStatus; classNa
         className,
       )}
     >
-      {STATUS_LABELS[status]}
+      {t(`orderStatus.${status}`)}
     </span>
   );
 }
@@ -53,4 +55,13 @@ export function formatQty(cases: number, units: number): string {
     units ? `${units} unit${units === 1 ? '' : 's'}` : null,
   ].filter(Boolean);
   return parts.join(' + ') || '0';
+}
+
+/** `formatQty` in the reader's language. */
+export function useFormatQty() {
+  const t = useT();
+  return (cases: number, units: number) =>
+    [cases ? t('qty.cases', { n: cases }) : null, units ? t('qty.units', { n: units }) : null]
+      .filter(Boolean)
+      .join(' + ') || '0';
 }

@@ -20,9 +20,9 @@ import { cn } from '@/lib/utils';
 import { istToday } from '@/features/field/api';
 import { enqueue, newUuid } from '@/features/field/offline/outbox';
 import { PhotoCapture, type CapturedPhoto } from '@/features/field/photo-input';
-import { CATEGORY_LABELS, MODE_LABELS } from '@/features/expenses/components';
 import { usePolicy } from '@/features/expenses/api';
 import { formatINR } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 
 /** Hand-entered TA is for fares; own-vehicle TA is drafted at End Day. */
 const FARE_MODES: TravelMode[] = ['BUS', 'TRAIN', 'AUTO'];
@@ -53,6 +53,7 @@ function Chip({
 
 function NewExpenseForm() {
   const router = useRouter();
+  const t = useT();
   const params = useSearchParams();
   const workDayId = params.get('workDayId');
   const policy = usePolicy();
@@ -70,19 +71,19 @@ function NewExpenseForm() {
   const back = workDayId ? '/app' : '/app/expenses';
   const limitHint =
     rates && category === 'LODGING'
-      ? `Policy limit ${formatINR(rates.maxLodgingPerNight)} per night`
+      ? t('exp.lodgingLimit', { amount: formatINR(rates.maxLodgingPerNight) })
       : rates && category === 'PHONE'
-        ? `Policy allows ${formatINR(rates.monthlyPhoneAllowance)} a month`
+        ? t('exp.phoneLimit', { amount: formatINR(rates.monthlyPhoneAllowance) })
         : category === 'TA' && !OWN_VEHICLE_MODES.includes(travelMode)
           ? rates?.publicTransportNeedsBill
-            ? 'Paid at the fare. Add the ticket photo.'
-            : 'Paid at the fare.'
+            ? t('exp.fareBill')
+            : t('exp.fareOnly')
           : null;
 
   const save = async () => {
     const value = Number(amount);
-    if (!value || value <= 0) return toast.error('Enter the amount');
-    if (!workDayId && !date) return toast.error('Pick the date');
+    if (!value || value <= 0) return toast.error(t('exp.err.amount'));
+    if (!workDayId && !date) return toast.error(t('exp.err.date'));
     setSaving(true);
     try {
       const taken = bills.filter((b): b is CapturedPhoto => Boolean(b));
@@ -100,15 +101,11 @@ function NewExpenseForm() {
         photos: taken.map((b, i) => ({ key: `${clientUuid}-${i + 1}`, blob: b.blob })),
       });
       toast.success(
-        workDayId
-          ? 'Added to today. It goes for approval when you submit the day.'
-          : navigator.onLine
-            ? 'Expense sent for approval'
-            : 'Saved on this phone. It will be sent when you are online.',
+        workDayId ? t('exp.addedToday') : navigator.onLine ? t('exp.sent') : t('exp.savedOffline'),
       );
       router.push(back);
     } catch {
-      toast.error('Could not save on this phone.');
+      toast.error(t('common.couldNotSave'));
       setSaving(false);
     }
   };
@@ -116,15 +113,15 @@ function NewExpenseForm() {
   return (
     <div className="space-y-4 pb-4">
       <div className="flex items-center gap-2">
-        <Button asChild variant="ghost" size="icon" aria-label="Back">
+        <Button asChild variant="ghost" size="icon" aria-label={t('common.back')}>
           <Link href={back}>
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Add expense</h1>
+          <h1 className="text-xl font-semibold tracking-tight">{t('exp.addTitle')}</h1>
           <p className="text-muted-foreground text-xs">
-            {workDayId ? "For today's work day" : 'Not tied to a work day, e.g. a phone bill'}
+            {workDayId ? t('exp.forToday') : t('exp.notTied')}
           </p>
         </div>
       </div>
@@ -132,26 +129,24 @@ function NewExpenseForm() {
       <Card>
         <CardContent className="space-y-4 pt-6">
           <div className="space-y-2">
-            <Label>What for</Label>
+            <Label>{t('exp.whatFor')}</Label>
             <div className="grid grid-cols-2 gap-2">
               {MANUAL_CATEGORIES.map((c) => (
                 <Chip key={c} active={category === c} onClick={() => setCategory(c)}>
-                  {c === 'TA' ? 'Fare (TA)' : CATEGORY_LABELS[c]}
+                  {c === 'TA' ? t('exp.fare') : t(`expCat.${c}`)}
                 </Chip>
               ))}
             </div>
-            <p className="text-muted-foreground text-xs">
-              DA and bike/car TA are worked out for you at End Day.
-            </p>
+            <p className="text-muted-foreground text-xs">{t('exp.autoNote')}</p>
           </div>
 
           {category === 'TA' ? (
             <div className="space-y-2">
-              <Label>Travelled by</Label>
+              <Label>{t('exp.travelledBy')}</Label>
               <div className="grid grid-cols-3 gap-2">
                 {FARE_MODES.map((m) => (
                   <Chip key={m} active={travelMode === m} onClick={() => setTravelMode(m)}>
-                    {MODE_LABELS[m]}
+                    {t(`mode.${m}`)}
                   </Chip>
                 ))}
               </div>
@@ -160,7 +155,7 @@ function NewExpenseForm() {
 
           {!workDayId ? (
             <div className="space-y-1.5">
-              <Label htmlFor="exp-date">Date</Label>
+              <Label htmlFor="exp-date">{t('exp.date')}</Label>
               <Input
                 id="exp-date"
                 type="date"
@@ -173,7 +168,7 @@ function NewExpenseForm() {
           ) : null}
 
           <div className="space-y-1.5">
-            <Label htmlFor="exp-amount">Amount ₹</Label>
+            <Label htmlFor="exp-amount">{t('exp.amount')}</Label>
             <Input
               id="exp-amount"
               className="h-12 text-lg"
@@ -185,12 +180,16 @@ function NewExpenseForm() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="exp-desc">Details (optional)</Label>
+            <Label htmlFor="exp-desc">{t('exp.details')}</Label>
             <Input
               id="exp-desc"
               className="h-12"
               placeholder={
-                category === 'LODGING' ? 'Hotel name, town' : category === 'TA' ? 'From – to' : ''
+                category === 'LODGING'
+                  ? t('exp.hotelHint')
+                  : category === 'TA'
+                    ? t('exp.routeHint')
+                    : ''
               }
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -198,12 +197,12 @@ function NewExpenseForm() {
           </div>
 
           <div className="space-y-2">
-            <Label>Bill photos</Label>
+            <Label>{t('exp.bills')}</Label>
             <div className="flex flex-wrap gap-3">
               {bills.map((bill, i) => (
                 <PhotoCapture
                   key={i}
-                  label={`Bill ${i + 1}`}
+                  label={t('exp.bill', { n: i + 1 })}
                   fix={null}
                   photo={bill}
                   onChange={(photo) => {
@@ -227,7 +226,7 @@ function NewExpenseForm() {
         disabled={saving}
       >
         {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
-        {workDayId ? 'Add to today' : 'Send for approval'}
+        {workDayId ? t('exp.addToday') : t('exp.send')}
       </Button>
     </div>
   );

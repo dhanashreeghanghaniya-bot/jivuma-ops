@@ -10,10 +10,8 @@ import { ApiRequestError } from '@/lib/api-client';
 import { formatINR, formatTime } from '@/lib/format';
 import { MyExpenseList, useMyExpenses } from '@/features/expenses/mine';
 import { useSubmitDay } from './api';
-import { DAY_TYPE_LABELS, formatMinutes } from './labels';
-
-const errorMessage = (err: unknown) =>
-  err instanceof ApiRequestError ? err.message : 'No network. Submitting needs signal.';
+import { useT } from '@/lib/i18n';
+import { formatMinutes } from './labels';
 
 export function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -25,6 +23,7 @@ export function Stat({ label, value }: { label: string; value: string }) {
 }
 
 export function DaySummaryCard({ day }: { day: WorkDaySummary }) {
+  const t = useT();
   const submitDay = useSubmitDay();
   const submitted = day.status !== 'OPEN';
   const expenses = useMyExpenses({ workDayId: day.id });
@@ -35,49 +34,49 @@ export function DaySummaryCard({ day }: { day: WorkDaySummary }) {
   const submit = async () => {
     try {
       await submitDay.mutateAsync(day.id);
-      toast.success('Day submitted');
+      toast.success(t('summary.submitted'));
     } catch (err) {
-      toast.error(errorMessage(err));
+      toast.error(err instanceof ApiRequestError ? err.message : t('common.noSignalSubmit'));
     }
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Day ended at {formatTime(day.endAt)}</CardTitle>
+        <CardTitle className="text-base">
+          {t('summary.endedAt', { time: formatTime(day.endAt) })}
+        </CardTitle>
         <CardDescription>
           {formatTime(day.startAt)} – {formatTime(day.endAt)} · {formatMinutes(day.workingMinutes)}{' '}
-          · {DAY_TYPE_LABELS[day.dayType]}
+          · {t(`dayType.${day.dayType}`)}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-2">
-          <Stat label="Visits" value={String(day.totals.visits)} />
+          <Stat label={t('common.visits')} value={String(day.totals.visits)} />
           <Stat
-            label="Orders"
+            label={t('common.orders')}
             value={`${day.totals.orders} · ${formatINR(day.totals.orderValue)}`}
           />
-          <Stat label="New shops" value={String(day.totals.newShops)} />
-          <Stat label="Leads" value={String(day.totals.leads)} />
-          <Stat label="Km (used)" value={day.totalKm ?? '-'} />
-          <Stat label="Km (GPS)" value={day.gpsKm ?? '-'} />
+          <Stat label={t('common.newShops')} value={String(day.totals.newShops)} />
+          <Stat label={t('common.leads')} value={String(day.totals.leads)} />
+          <Stat label={t('summary.kmUsed')} value={day.totalKm ?? '-'} />
+          <Stat label={t('summary.kmGps')} value={day.gpsKm ?? '-'} />
         </div>
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">Expenses</p>
+            <p className="text-sm font-medium">{t('summary.expenses')}</p>
             <p className="text-sm tabular-nums">{formatINR(claimed, true)}</p>
           </div>
           {expenses.rows.length === 0 && !expenses.isPending ? (
-            <p className="text-muted-foreground text-xs">
-              No TA/DA for this day under the policy. Add any fares, lodging or food below.
-            </p>
+            <p className="text-muted-foreground text-xs">{t('summary.noExpenses')}</p>
           ) : null}
           <MyExpenseList rows={expenses.rows} showDate={false} />
           {!submitted ? (
             <Button asChild variant="outline" className="h-12 w-full">
               <Link href={`/app/expenses/new?workDayId=${day.id}`}>
                 <Plus className="h-4 w-4" />
-                Add fare, lodging, food...
+                {t('summary.addExpense')}
               </Link>
             </Button>
           ) : null}
@@ -90,7 +89,7 @@ export function DaySummaryCard({ day }: { day: WorkDaySummary }) {
         {submitted ? (
           <p className="bg-muted flex items-center gap-2 rounded-md px-3 py-3 text-sm">
             <Lock className="h-4 w-4" />
-            Submitted and locked. Ask the admin if something needs changing.
+            {t('summary.locked')}
           </p>
         ) : (
           <Button
@@ -104,9 +103,7 @@ export function DaySummaryCard({ day }: { day: WorkDaySummary }) {
             ) : (
               <Send className="h-5 w-5" />
             )}
-            {unsynced > 0
-              ? `Waiting for ${unsynced} expense${unsynced === 1 ? '' : 's'} to sync`
-              : 'Submit day with expenses'}
+            {unsynced > 0 ? t('summary.waitingExpenses', { n: unsynced }) : t('summary.submit')}
           </Button>
         )}
       </CardContent>

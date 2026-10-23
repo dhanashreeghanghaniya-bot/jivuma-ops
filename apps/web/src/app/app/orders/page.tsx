@@ -11,12 +11,14 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/data-states';
 import { api } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { formatDate, formatINR } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { withOfflineCopy } from '@/features/field/api';
 import { StatusPill } from '@/features/orders/labels';
 
 /** SPEC 5.2: the orders he took, with where each one has got to. */
 export default function SalesmanOrdersPage() {
   const { user } = useAuth();
+  const t = useT();
   const [page, setPage] = useState(1);
   const orders = useQuery({
     queryKey: ['orders', 'mine', page],
@@ -35,24 +37,22 @@ export default function SalesmanOrdersPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Orders</h1>
+        <h1 className="text-xl font-semibold tracking-tight">{t('orders.title')}</h1>
         {meta ? (
           <p className="text-muted-foreground text-sm">
-            {meta.total} orders taken · {formatINR(meta.totalValue)}
+            {t('orders.summary', { n: meta.total, value: formatINR(meta.totalValue) })}
           </p>
         ) : null}
       </div>
 
       {orders.data?.fromCache ? (
         <p className="bg-muted text-muted-foreground rounded-md px-3 py-2 text-xs">
-          Offline: statuses as this phone last saw them.
+          {t('orders.offline')}
         </p>
       ) : null}
       {orders.isPending ? <LoadingState /> : null}
       {orders.isError ? <ErrorState onRetry={() => void orders.refetch()} /> : null}
-      {orders.data?.items.length === 0 ? (
-        <EmptyState message="No orders yet. Orders you take on visits show up here." />
-      ) : null}
+      {orders.data?.items.length === 0 ? <EmptyState message={t('orders.none')} /> : null}
 
       <div className="space-y-2">
         {orders.data?.items.map((o) => (
@@ -79,7 +79,7 @@ export default function SalesmanOrdersPage() {
       {meta && meta.totalPages > 1 ? (
         <div className="flex items-center justify-between">
           <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-            Newer
+            {t('orders.newer')}
           </Button>
           <span className="text-muted-foreground text-sm">
             {page} / {meta.totalPages}
@@ -89,7 +89,7 @@ export default function SalesmanOrdersPage() {
             disabled={page >= meta.totalPages}
             onClick={() => setPage((p) => p + 1)}
           >
-            Older
+            {t('orders.older')}
           </Button>
         </div>
       ) : null}

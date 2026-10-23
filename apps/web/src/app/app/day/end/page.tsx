@@ -14,6 +14,7 @@ import { EmptyState, LoadingState } from '@/components/data-states';
 import { ApiRequestError } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { formatINR, formatTime } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import {
   istToday,
   uploadNow,
@@ -28,14 +29,7 @@ import { newUuid, syncNow, useOutbox, visibleItems } from '@/features/field/offl
 import { PhotoCapture, type CapturedPhoto } from '@/features/field/photo-input';
 import { useDayVisits } from '@/features/field/use-day-visits';
 
-const TRAVEL_CHOICES: { value: TravelMode | 'NONE'; label: string }[] = [
-  { value: 'BIKE', label: 'Bike' },
-  { value: 'CAR', label: 'Car' },
-  { value: 'AUTO', label: 'Auto' },
-  { value: 'BUS', label: 'Bus' },
-  { value: 'TRAIN', label: 'Train' },
-  { value: 'NONE', label: 'No travel' },
-];
+const TRAVEL_CHOICES: (TravelMode | 'NONE')[] = ['BIKE', 'CAR', 'AUTO', 'BUS', 'TRAIN', 'NONE'];
 
 /**
  * SPEC 5.1.6. Location is mandatory and the time comes from the server, so
@@ -44,6 +38,7 @@ const TRAVEL_CHOICES: { value: TravelMode | 'NONE'; label: string }[] = [
  */
 export default function EndDayPage() {
   const router = useRouter();
+  const t = useT();
   const current = useCurrentDay();
   const storage = useStorageStatus();
   const endDay = useEndDay();
@@ -62,10 +57,10 @@ export default function EndDayPage() {
   if (!day || current.data?.isStale) {
     return (
       <EmptyState
-        message="There is no day running to end."
+        message={t('end.noDay')}
         action={
           <Button asChild>
-            <Link href="/app">Go to Today</Link>
+            <Link href="/app">{t('common.goToday')}</Link>
           </Button>
         }
       />
@@ -84,15 +79,14 @@ export default function EndDayPage() {
     try {
       await syncNow();
       const { fix, poor } = await getFix();
-      if (poor)
-        toast.warning(`Weak GPS (±${fix.accuracyM} m). Ending anyway; the admin will see it.`);
+      if (poor) toast.warning(t('common.weakGpsEnd', { m: fix.accuracyM }));
 
       let endOdometerPhotoPath: string | null = null;
       if (photo && storage.data?.configured) {
         try {
           endOdometerPhotoPath = await uploadNow('odometer', `end-${newUuid()}`, photo.blob);
         } catch {
-          toast.warning('Odometer photo did not upload. Ending the day without it.');
+          toast.warning(t('end.photoFailed'));
         }
       }
 
@@ -106,14 +100,11 @@ export default function EndDayPage() {
           remarks: remarks.trim() || null,
         },
       });
-      toast.success('Day ended. Check the summary and submit.');
+      toast.success(t('end.ended'));
       router.push('/app');
     } catch (err) {
       if (err instanceof LocationError) setLocationError(err.reason);
-      else
-        toast.error(
-          err instanceof ApiRequestError ? err.message : 'No network. Ending the day needs signal.',
-        );
+      else toast.error(err instanceof ApiRequestError ? err.message : t('end.noSignal'));
     } finally {
       setLocating(false);
     }
@@ -124,25 +115,28 @@ export default function EndDayPage() {
   return (
     <div className="space-y-4 pb-4">
       <div className="flex items-center gap-2">
-        <Button asChild variant="ghost" size="icon" aria-label="Back">
+        <Button asChild variant="ghost" size="icon" aria-label={t('common.back')}>
           <Link href="/app">
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
-        <h1 className="text-xl font-semibold tracking-tight">End day</h1>
+        <h1 className="text-xl font-semibold tracking-tight">{t('end.title')}</h1>
       </div>
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Today so far</CardTitle>
+          <CardTitle className="text-base">{t('end.soFar')}</CardTitle>
           <CardDescription>
-            Started {formatTime(day.startAt)} at {day.startPlaceLabel ?? 'your start point'}
+            {t('end.startedAt', {
+              time: formatTime(day.startAt),
+              place: day.startPlaceLabel ?? t('end.startPoint'),
+            })}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-3 gap-2">
-          <Stat label="Visits" value={String(totals.visits)} />
-          <Stat label="Orders" value={String(totals.orders)} />
-          <Stat label="Value" value={formatINR(totals.orderValue)} />
+          <Stat label={t('common.visits')} value={String(totals.visits)} />
+          <Stat label={t('common.orders')} value={String(totals.orders)} />
+          <Stat label={t('common.value')} value={formatINR(totals.orderValue)} />
         </CardContent>
       </Card>
 
@@ -151,17 +145,13 @@ export default function EndDayPage() {
           <CardContent className="space-y-3 pt-6">
             <p className="flex items-center gap-2 text-sm font-medium">
               <CloudOff className="h-4 w-4" />
-              {unsynced.length} item{unsynced.length === 1 ? '' : 's'} not synced yet
+              {t('end.unsynced', { n: unsynced.length })}
             </p>
             <p className="text-muted-foreground text-sm">
-              {outbox.online
-                ? 'Sync them before ending the day so your summary is complete.'
-                : 'You are offline. Get signal to sync them and end the day.'}
+              {outbox.online ? t('end.syncFirst') : t('end.offline')}
             </p>
             {unsynced.some((i) => i.dead) ? (
-              <p className="text-destructive text-sm">
-                Some items were refused by the server. Open Visits to see why.
-              </p>
+              <p className="text-destructive text-sm">{t('end.refused')}</p>
             ) : null}
             <Button
               variant="outline"
@@ -174,7 +164,7 @@ export default function EndDayPage() {
               ) : (
                 <RefreshCw className="h-4 w-4" />
               )}
-              Sync now
+              {t('end.syncNow')}
             </Button>
           </CardContent>
         </Card>
@@ -183,55 +173,63 @@ export default function EndDayPage() {
       <Card>
         <CardContent className="space-y-4 pt-6">
           <div className="space-y-2">
-            <Label>How did you travel today?</Label>
+            <Label>{t('end.travel')}</Label>
             <div className="grid grid-cols-3 gap-2">
               {TRAVEL_CHOICES.map((choice) => (
                 <button
-                  key={choice.value}
+                  key={choice}
                   type="button"
-                  aria-pressed={travelMode === choice.value}
-                  onClick={() => setTravelMode(choice.value)}
+                  aria-pressed={travelMode === choice}
+                  onClick={() => setTravelMode(choice)}
                   className={cn(
                     'min-h-11 rounded-md border px-2 text-sm font-medium',
-                    travelMode === choice.value &&
-                      'border-primary bg-primary text-primary-foreground',
+                    travelMode === choice && 'border-primary bg-primary text-primary-foreground',
                   )}
                 >
-                  {choice.label}
+                  {t(`mode.${choice}`)}
                 </button>
               ))}
             </div>
             <p className="text-muted-foreground text-xs">
               {travelMode === 'BUS' || travelMode === 'TRAIN'
-                ? 'Bus and train are paid at the fare. Add the fare with the ticket photo after ending the day.'
+                ? t('end.fareNote')
                 : travelMode === 'NONE'
-                  ? 'No TA will be drafted.'
-                  : 'TA is drafted from the km travelled at the policy rate.'}
+                  ? t('end.noTa')
+                  : t('end.kmNote')}
             </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="end-odo">Odometer (optional)</Label>
+            <Label htmlFor="end-odo">{t('common.odometerOptional')}</Label>
             <div className="flex items-start gap-3">
               <Input
                 id="end-odo"
                 inputMode="numeric"
-                placeholder={day.startOdometer ? `started at ${day.startOdometer}` : 'e.g. 20512'}
+                placeholder={
+                  day.startOdometer
+                    ? t('end.startedAtOdo', { n: day.startOdometer })
+                    : t('end.odometerExample')
+                }
                 value={odometer}
                 onChange={(e) => setOdometer(e.target.value.replace(/\D/g, ''))}
                 className="h-12 text-base"
               />
               {storage.data?.configured ? (
-                <PhotoCapture label="Odometer" fix={null} photo={photo} onChange={setPhoto} />
+                <PhotoCapture
+                  label={t('common.odometer')}
+                  fix={null}
+                  photo={photo}
+                  onChange={setPhoto}
+                />
               ) : null}
             </div>
             {day.startOdometer && odometer && Number(odometer) >= day.startOdometer ? (
               <p className="text-muted-foreground text-xs">
-                {Number(odometer) - day.startOdometer} km by odometer
+                {t('end.kmByOdometer', { n: Number(odometer) - day.startOdometer })}
               </p>
             ) : null}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="end-remarks">Remarks (optional)</Label>
+            <Label htmlFor="end-remarks">{t('end.remarks')}</Label>
             <textarea
               id="end-remarks"
               rows={2}
@@ -254,7 +252,7 @@ export default function EndDayPage() {
         disabled={busy || unsynced.length > 0}
       >
         {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <MapPin className="h-5 w-5" />}
-        {locating ? 'Getting your location...' : 'End Day'}
+        {locating ? t('common.gettingLocation') : t('end.button')}
       </Button>
     </div>
   );

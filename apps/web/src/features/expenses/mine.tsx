@@ -9,9 +9,10 @@ import { Button } from '@/components/ui/button';
 import { api, ApiRequestError } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { formatDate, formatINR } from '@/lib/format';
+import { useT } from '@/lib/i18n';
 import { withOfflineCopy } from '@/features/field/api';
 import { discard, useOutbox } from '@/features/field/offline/outbox';
-import { CATEGORY_LABELS, ExpenseStatusPill, FlagPills, MODE_LABELS } from './components';
+import { ExpenseStatusPill, FlagPills } from './components';
 import { useQueryClient } from '@tanstack/react-query';
 
 /** One row as the salesman sees it: from the server, or still on the phone. */
@@ -37,6 +38,7 @@ export interface MyExpenseRow {
  */
 export function useMyExpenses(filter: { month?: string; workDayId?: string }) {
   const { user } = useAuth();
+  const t = useT();
   const { items: outbox } = useOutbox();
   const key = filter.workDayId ? `day:${filter.workDayId}` : `month:${filter.month}`;
   const query = useQuery({
@@ -67,8 +69,8 @@ export function useMyExpenses(filter: { month?: string; workDayId?: string }) {
         outboxId: q?.id ?? null,
         date: e.date,
         label:
-          CATEGORY_LABELS[e.category] +
-          (e.travelMode ? ` · ${MODE_LABELS[e.travelMode]}` : '') +
+          t(`expCat.${e.category}`) +
+          (e.travelMode ? ` · ${t(`mode.${e.travelMode}`)}` : '') +
           (e.km ? ` · ${Number(e.km)} km` : ''),
         description: e.description,
         amountClaimed: e.amountClaimed,
@@ -89,8 +91,8 @@ export function useMyExpenses(filter: { month?: string; workDayId?: string }) {
         outboxId: q.id,
         date: q.payload.date ?? '',
         label:
-          CATEGORY_LABELS[q.payload.category] +
-          (q.payload.travelMode ? ` · ${MODE_LABELS[q.payload.travelMode]}` : ''),
+          t(`expCat.${q.payload.category}`) +
+          (q.payload.travelMode ? ` · ${t(`mode.${q.payload.travelMode}`)}` : ''),
         description: q.payload.description ?? null,
         amountClaimed: q.payload.amountClaimed.toFixed(2),
         amountApproved: null,
@@ -101,7 +103,7 @@ export function useMyExpenses(filter: { month?: string; workDayId?: string }) {
         dead: Boolean(q.dead),
       }));
     return [...fromQueue, ...fromServer];
-  }, [query.data, outbox, filter.workDayId, filter.month]);
+  }, [query.data, outbox, filter.workDayId, filter.month, t]);
 
   return { ...query, rows, summary: query.data?.summary };
 }
@@ -114,17 +116,16 @@ export function MyExpenseList({
   showDate?: boolean;
 }) {
   const qc = useQueryClient();
+  const t = useT();
 
   const remove = async (row: MyExpenseRow) => {
     try {
       if (row.serverId) await api.delete(`/expenses/${row.serverId}`);
       if (row.outboxId) await discard(row.outboxId);
       void qc.invalidateQueries({ queryKey: ['expenses'] });
-      toast.success('Expense removed');
+      toast.success(t('exp.removed'));
     } catch (err) {
-      toast.error(
-        err instanceof ApiRequestError ? err.message : 'No network. Try again with signal.',
-      );
+      toast.error(err instanceof ApiRequestError ? err.message : t('common.noSignalRetry'));
     }
   };
 
@@ -141,7 +142,7 @@ export function MyExpenseList({
                   {[
                     showDate && row.date ? formatDate(row.date) : null,
                     row.description,
-                    row.item?.isAutoDrafted ? 'from policy' : null,
+                    row.item?.isAutoDrafted ? t('exp.fromPolicy') : null,
                   ]
                     .filter(Boolean)
                     .join(' · ')}
@@ -153,7 +154,7 @@ export function MyExpenseList({
                 row.item?.status !== 'SUBMITTED' &&
                 row.item?.status !== 'DRAFT' ? (
                   <p className="text-muted-foreground text-xs tabular-nums">
-                    approved {formatINR(row.amountApproved, true)}
+                    {t('exp.approvedAmount', { amount: formatINR(row.amountApproved, true) })}
                   </p>
                 ) : null}
               </div>
@@ -162,7 +163,9 @@ export function MyExpenseList({
               {row.pending ? (
                 <span className="flex items-center gap-1 text-xs text-amber-700">
                   <CloudOff className="h-3.5 w-3.5" />
-                  {row.dead ? `Refused: ${row.error}` : 'Waiting to sync'}
+                  {row.dead
+                    ? t('common.refused', { error: row.error ?? '' })
+                    : t('common.waitingToSync')}
                 </span>
               ) : row.item ? (
                 <ExpenseStatusPill status={row.item.status} />
@@ -182,12 +185,12 @@ export function MyExpenseList({
                   onClick={() => void remove(row)}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                  Remove
+                  {t('common.remove')}
                 </Button>
               ) : null}
             </div>
             {row.item?.adminRemark ? (
-              <p className="text-xs">Admin: “{row.item.adminRemark}”</p>
+              <p className="text-xs">{t('exp.adminRemark', { remark: row.item.adminRemark })}</p>
             ) : null}
           </div>
         );

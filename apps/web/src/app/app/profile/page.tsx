@@ -15,6 +15,7 @@ import { ApiRequestError, api } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { formatPhone } from '@/lib/format';
 import { useT } from '@/lib/i18n';
+import { LanguageSwitch } from '@/lib/i18n/language-switch';
 import { useOutbox, visibleItems } from '@/features/field/offline/outbox';
 import { MyMonthCard } from '@/features/payroll/my-month';
 
@@ -38,12 +39,12 @@ export default function ProfilePage() {
     setFormError(null);
     try {
       await api.post('/auth/change-password', values);
-      toast.success('Password changed. Please sign in again.');
+      toast.success(t('profile.passwordChanged'));
       reset();
       // Changing the password revokes every session, this one included.
       await logout();
     } catch (err) {
-      setFormError(err instanceof ApiRequestError ? err.message : 'Could not change the password');
+      setFormError(err instanceof ApiRequestError ? err.message : t('profile.passwordFailed'));
     }
   });
 
@@ -58,17 +59,24 @@ export default function ProfilePage() {
         </CardHeader>
       </Card>
 
+      <Card>
+        <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
+          <CardTitle className="text-base">{t('lang.label')}</CardTitle>
+          <LanguageSwitch />
+        </CardHeader>
+      </Card>
+
       <MyMonthCard />
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Change password</CardTitle>
-          <CardDescription>You will be signed out of every device.</CardDescription>
+          <CardTitle className="text-base">{t('profile.changePassword')}</CardTitle>
+          <CardDescription>{t('profile.signedOutEverywhere')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4" noValidate>
             <div className="space-y-2">
-              <Label htmlFor="currentPassword">Current password</Label>
+              <Label htmlFor="currentPassword">{t('profile.currentPassword')}</Label>
               <Input id="currentPassword" type="password" {...register('currentPassword')} />
               {errors.currentPassword ? (
                 <p className="text-destructive text-sm">{errors.currentPassword.message}</p>
@@ -76,7 +84,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="newPassword">New password</Label>
+              <Label htmlFor="newPassword">{t('profile.newPassword')}</Label>
               <Input id="newPassword" type="password" {...register('newPassword')} />
               {errors.newPassword ? (
                 <p className="text-destructive text-sm">{errors.newPassword.message}</p>
@@ -84,7 +92,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm new password</Label>
+              <Label htmlFor="confirmPassword">{t('profile.confirmPassword')}</Label>
               <Input id="confirmPassword" type="password" {...register('confirmPassword')} />
               {errors.confirmPassword ? (
                 <p className="text-destructive text-sm">{errors.confirmPassword.message}</p>
@@ -104,16 +112,13 @@ export default function ProfilePage() {
       {confirmLogout ? (
         <Card className="border-destructive/50">
           <CardContent className="space-y-3 pt-6">
-            <p className="text-sm">
-              {unsynced} item{unsynced === 1 ? ' has' : 's have'} not reached the server yet.
-              Signing out deletes {unsynced === 1 ? 'it' : 'them'} from this phone.
-            </p>
+            <p className="text-sm">{t('profile.unsyncedWarning', { n: unsynced })}</p>
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" onClick={() => setConfirmLogout(false)}>
                 {t('common.cancel')}
               </Button>
               <Button variant="destructive" onClick={() => void logout()}>
-                Sign out anyway
+                {t('profile.signOutAnyway')}
               </Button>
             </div>
           </CardContent>
