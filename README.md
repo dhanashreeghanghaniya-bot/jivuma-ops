@@ -225,6 +225,21 @@ cannot both win. A distributor can only buy from its own super stockist.
 
 Sales and coverage export to Excel. All reports are admin-only.
 
+## Sales team
+
+**Sales team** (admin) is the field-force view:
+- **Today**: who has started, where they are, visits, orders and km so far, plus a list of
+  flags from the last 7 days: check-in far from the shop, a day with no visits, odometer km
+  above 1.3x the GPS km, a day never ended, and gaps of 2 hours or more between positions.
+- **Salesman → Calendar**: a month with each day worked, still open, on leave, a holiday or
+  absent. Click a day to open it.
+- **Salesman → Date range**: towns and shops visited, orders and expenses for up to 92 days,
+  with an Excel export (one sheet each).
+- **Salesman → Territory & beats**: tick the districts a salesman covers and build beats
+  (an ordered list of shops, optionally tied to a weekday).
+- **Day detail**: the day's route replayed on a drawn map (numbered visit markers, play and
+  slider), a timeline with gaps and flags, and the day's km, visits, orders and claims.
+
 ## Salesman field app (PWA)
 
 The salesman UI at `/app` is an installable PWA. Work recorded in the field (visits with

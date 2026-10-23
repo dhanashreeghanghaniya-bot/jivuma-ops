@@ -129,7 +129,7 @@ async function summarise(rows: Row[]): Promise<WorkDaySummary[]> {
   return rows.map((row) => toSummary(row, totals.get(row.id)!));
 }
 
-async function summaryById(id: string): Promise<WorkDaySummary> {
+export async function summaryById(id: string): Promise<WorkDaySummary> {
   const row = await prisma.workDay.findUniqueOrThrow({ where: { id }, include });
   return (await summarise([row]))[0]!;
 }

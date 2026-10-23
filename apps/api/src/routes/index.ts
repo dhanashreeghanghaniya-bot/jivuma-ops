@@ -21,6 +21,7 @@ import {
   salaryRouter,
 } from '../modules/payroll/payroll.routes';
 import { reportsRouter } from '../modules/reports/reports.routes';
+import { salesTeamRouter } from '../modules/salesteam/salesteam.routes';
 import {
   distributorsRouter,
   retailersRouter,
@@ -58,4 +59,5 @@ apiV1Router.use('/salary-structures', salaryRouter);
 apiV1Router.use('/incentives', incentivesRouter);
 apiV1Router.use('/reports/monthly-cost', costReportRouter);
 apiV1Router.use('/reports', reportsRouter);
+apiV1Router.use('/sales-team', salesTeamRouter);
 apiV1Router.use('/import', importRouter);

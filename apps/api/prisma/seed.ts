@@ -35,7 +35,11 @@ import {
   sid,
 } from './seed/helpers';
 
-const prisma = new PrismaClient();
+// The seed is a long script of many small writes: run it on the session pooler
+// (DIRECT_URL) as the README says, not the transaction pooler the API uses.
+const prisma = new PrismaClient({
+  datasources: { db: { url: process.env.DIRECT_URL ?? process.env.DATABASE_URL } },
+});
 const rand = makeRandom(20261016);
 
 const DEFAULT_PASSWORD = process.env.SEED_DEFAULT_PASSWORD ?? 'Juma@12345';
@@ -516,8 +520,15 @@ async function seedTerritoriesAndBeats() {
   ];
 
   for (const t of territories) {
+    // Matched on what the row means, not its id: the admin can replace a
+    // territory (new ids), and a re-seed must not trip the unique constraint.
     await prisma.salesmanTerritory.upsert({
-      where: { id: sid('territory', t.key) },
+      where: {
+        salesmanId_districtId: {
+          salesmanId: sid('user', t.salesmanKey),
+          districtId: districtId(t.districtCode),
+        },
+      },
       create: {
         id: sid('territory', t.key),
         salesmanId: sid('user', t.salesmanKey),
@@ -611,7 +622,9 @@ async function seedSalaryAndIncentives(adminId: string) {
   }
 
   // The month the seeded field history falls in, so its cost report has an incentive.
-  const month = addDays(new Date(), -Math.ceil(HISTORY_DAYS / 2)).toISOString().slice(0, 7);
+  const month = addDays(new Date(), -Math.ceil(HISTORY_DAYS / 2))
+    .toISOString()
+    .slice(0, 7);
 
   await prisma.incentive.upsert({
     where: { id: sid('incentive', 'I1') },
@@ -809,7 +822,7 @@ async function seedFieldHistory(policy: {
         };
         const tookOrder = rand() > 0.35;
 
-        await prisma.visit.upsert({
+        const visit = await prisma.visit.upsert({
           where: { id: visitId },
           create: {
             id: visitId,
@@ -858,7 +871,9 @@ async function seedFieldHistory(policy: {
           update: {},
         });
 
-        if (!tookOrder) continue;
+        // Follow the stored outcome, not this run's dice: a re-seed on a later date
+        // draws different numbers, and an existing NO_ORDER visit must not gain an order.
+        if (visit.outcome !== VisitOutcome.ORDER_TAKEN) continue;
 
         // Derived from the order's own identity rather than a running counter, so
         // re-seeding never renumbers (and collides with) an existing order.
