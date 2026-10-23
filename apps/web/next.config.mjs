@@ -15,6 +15,13 @@ const nextConfig = {
   // @juma/shared ships compiled CommonJS from the workspace; let Next bundle it.
   transpilePackages: ['@juma/shared'],
   eslint: { ignoreDuringBuilds: true },
+  // In production the browser calls `/api/v1` on this site and Vercel forwards it
+  // to the API host, so the refresh cookie is first-party and no CORS is needed.
+  // Set API_PROXY_URL (e.g. https://juma-api.onrender.com) to turn it on.
+  async rewrites() {
+    const target = process.env.API_PROXY_URL?.replace(/\/+$/, '');
+    return target ? [{ source: '/api/v1/:path*', destination: `${target}/api/v1/:path*` }] : [];
+  },
 };
 
 export default withSerwist(nextConfig);

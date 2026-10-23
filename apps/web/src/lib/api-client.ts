@@ -50,7 +50,11 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
 }
 
 function buildUrl(path: string, query?: RequestOptions['query']): string {
-  const url = new URL(`${BASE_URL}${path}`);
+  // BASE_URL may be relative (`/api/v1`) when the web host proxies the API.
+  const url = new URL(
+    `${BASE_URL}${path}`,
+    typeof window === 'undefined' ? 'http://localhost' : window.location.origin,
+  );
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value === undefined || value === null || value === '') continue;
     url.searchParams.set(key, String(value));

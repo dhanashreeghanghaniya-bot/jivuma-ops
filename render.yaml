@@ -1,0 +1,52 @@
+# Render Blueprint for the API (SPEC 9, Phase 8). The web app goes on Vercel;
+# see DEPLOY.md for the whole sequence. Render has no India region, so the API
+# runs in Singapore, next to Supabase's Mumbai database.
+services:
+  - type: web
+    name: juma-api
+    runtime: node
+    region: singapore
+    # Free instances sleep after 15 minutes; a salesman's Start Day would wait
+    # ~a minute for the wake-up. Starter stays up.
+    plan: starter
+    buildCommand: >-
+      corepack enable &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @juma/shared build &&
+      pnpm --filter @juma/api db:generate &&
+      pnpm --filter @juma/api build
+    # Applies committed migrations before the new version takes traffic.
+    preDeployCommand: pnpm --filter @juma/api db:deploy
+    startCommand: pnpm --filter @juma/api start
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: '22'
+      # Supabase pooler strings; see apps/api/.env.example for the exact shape.
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      # The Vercel site's address, e.g. https://juma-ops.vercel.app
+      - key: CORS_ORIGINS
+        sync: false
+      - key: COOKIE_SECURE
+        value: 'true'
+      - key: COOKIE_SAMESITE
+        value: lax
+      # Browser -> Vercel -> Render -> API.
+      - key: TRUST_PROXY_HOPS
+        value: '2'
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: juma-files

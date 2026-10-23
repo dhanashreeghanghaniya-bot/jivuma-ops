@@ -5,6 +5,8 @@ chain Company → Super Stockist → Distributor → Retailer.
 
 `SPEC.md` is the source of truth for scope and phasing. **Phases 1–6 (Foundation, Geography & partners, Leads, Salesman field app, Orders, Expenses & approvals) are complete.**
 
+> Deploying to production (Supabase Pro + Render + Vercel): see [DEPLOY.md](DEPLOY.md).
+
 ## Layout
 
 ```

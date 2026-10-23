@@ -1248,7 +1248,48 @@ async function seedNotifications() {
   console.log('  notifications: 1');
 }
 
+/**
+ * Go-live (`SEED_SCOPE=base`): only what a real install needs. Gujarat's
+ * districts and towns, the allowance policy (edit it in Settings), and one
+ * admin from ADMIN_NAME / ADMIN_PHONE / ADMIN_PASSWORD. No demo partners,
+ * salesmen, orders or history.
+ */
+async function seedBase() {
+  const name = process.env.ADMIN_NAME?.trim();
+  const phone = process.env.ADMIN_PHONE?.trim();
+  const password = process.env.ADMIN_PASSWORD ?? '';
+  if (!name || !phone || !/^\+91[6-9]\d{9}$/.test(phone) || password.length < 8) {
+    throw new Error(
+      'SEED_SCOPE=base needs ADMIN_NAME, ADMIN_PHONE (+91XXXXXXXXXX) and ADMIN_PASSWORD (8+ characters)',
+    );
+  }
+  console.log('Seeding base data for a live install...');
+  await seedDistricts();
+  await seedTowns();
+  await seedAllowancePolicy();
+  const existing = await prisma.user.findUnique({ where: { phone } });
+  if (existing) {
+    console.log(`  admin ${phone} already exists; left as it is`);
+  } else {
+    const hqTown = await prisma.town.findFirstOrThrow({ where: { name: 'Ahmedabad' } });
+    await prisma.user.create({
+      data: {
+        name,
+        phone,
+        passwordHash: await bcrypt.hash(password, 12),
+        role: Role.ADMIN,
+        joiningDate: new Date(),
+        hqTownId: hqTown.id,
+      },
+    });
+    console.log(`  admin ${phone} created`);
+  }
+  await recomputeAllCoverage(prisma);
+  console.log('\nBase seed complete. Sign in as the admin and add products, users and partners.');
+}
+
 async function main() {
+  if (process.env.SEED_SCOPE === 'base') return seedBase();
   console.log('Seeding Juma development data...');
 
   await seedDistricts();

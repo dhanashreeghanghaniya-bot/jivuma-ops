@@ -13,8 +13,9 @@ import { ApiException } from './lib/http';
 export function createServer(): Express {
   const app = express();
 
-  // Behind Railway/Render/Vercel proxies, so `req.ip` and secure cookies work.
-  app.set('trust proxy', 1);
+  // Behind Render (and Vercel, when it proxies /api/v1), so `req.ip` is the
+  // phone's address and secure cookies work. See TRUST_PROXY_HOPS.
+  app.set('trust proxy', env.TRUST_PROXY_HOPS);
   app.set('json replacer', jsonReplacer);
   app.disable('x-powered-by');
 

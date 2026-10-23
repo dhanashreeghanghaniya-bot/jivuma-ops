@@ -11,6 +11,10 @@ const booleanish = z
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
+  // Proxies between the browser and this process. Render alone is 1; the web
+  // app proxying /api/v1 through Vercel adds one more, so set 2 there. Too
+  // low and every user shares the proxy's IP, and with it one login rate limit.
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(1),
 
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   DIRECT_URL: z.string().min(1).optional(),
