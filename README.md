@@ -212,6 +212,19 @@ cannot both win. A distributor can only buy from its own super stockist.
   glyph) and one Excel sheet for all salesmen. Salesmen see their statement under Profile →
   My month once it is final.
 
+## Analytics
+
+**Reports** also has:
+- **Sales**: order value by district, town, distributor or product, month on month (up to 24
+  months), for secondary (distributor → shop), SS → distributor or primary (company → SS)
+  orders; cancelled orders excluded. Change is the last month over the one before.
+- **Coverage**: every district's status, towns covered out of total, partner and lead counts,
+  and this month's secondary sales.
+- **Lead funnel**: leads by stage with expected investment, and conversion by type, source and
+  salesman, for leads created in a date range.
+
+Sales and coverage export to Excel. All reports are admin-only.
+
 ## Salesman field app (PWA)
 
 The salesman UI at `/app` is an installable PWA. Work recorded in the field (visits with

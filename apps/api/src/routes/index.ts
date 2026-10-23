@@ -20,6 +20,7 @@ import {
   incentivesRouter,
   salaryRouter,
 } from '../modules/payroll/payroll.routes';
+import { reportsRouter } from '../modules/reports/reports.routes';
 import {
   distributorsRouter,
   retailersRouter,
@@ -56,4 +57,5 @@ apiV1Router.use('/notifications', notificationsRouter);
 apiV1Router.use('/salary-structures', salaryRouter);
 apiV1Router.use('/incentives', incentivesRouter);
 apiV1Router.use('/reports/monthly-cost', costReportRouter);
+apiV1Router.use('/reports', reportsRouter);
 apiV1Router.use('/import', importRouter);

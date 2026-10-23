@@ -3,11 +3,17 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CostReportTab } from '@/features/payroll/cost-report-tab';
+import { CoverageTab, LeadsTab, SalesTab } from '@/features/reports/analytics';
 
-const TABS = [{ key: 'cost', label: 'Monthly cost' }] as const;
+const TABS = [
+  { key: 'sales', label: 'Sales' },
+  { key: 'cost', label: 'Monthly cost' },
+  { key: 'coverage', label: 'Coverage' },
+  { key: 'leads', label: 'Lead funnel' },
+] as const;
 
 export default function ReportsPage() {
-  const [tab, setTab] = useState<(typeof TABS)[number]['key']>('cost');
+  const [tab, setTab] = useState<(typeof TABS)[number]['key']>('sales');
   return (
     <div className="space-y-6">
       <div>
@@ -27,7 +33,10 @@ export default function ReportsPage() {
           </Button>
         ))}
       </div>
+      {tab === 'sales' ? <SalesTab /> : null}
       {tab === 'cost' ? <CostReportTab /> : null}
+      {tab === 'coverage' ? <CoverageTab /> : null}
+      {tab === 'leads' ? <LeadsTab /> : null}
     </div>
   );
 }
