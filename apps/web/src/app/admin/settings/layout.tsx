@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 const TABS = [
   { href: '/admin/settings/users', label: 'Users' },
   { href: '/admin/settings/allowance-policy', label: 'Allowance policy' },
+  { href: '/admin/settings/salaries', label: 'Salaries' },
   { href: '/admin/settings/products', label: 'Products' },
   { href: '/admin/settings/geography', label: 'Districts & towns' },
   { href: '/admin/settings/import', label: 'Bulk import' },

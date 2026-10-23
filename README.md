@@ -198,6 +198,20 @@ cannot both win. A distributor can only buy from its own super stockist.
   be approved, rejected or reopened for changes.
 - Salesmen and admins get in-app notifications (bell icon) for submissions and decisions.
 
+## Payroll cost reports
+
+- **Settings → Salaries**: monthly salary (basic + HRA + fixed allowance) by revision date;
+  a month uses the revision in force on its last day.
+- **Reports → Monthly cost**: generate a month for every active salesman (and anyone who
+  worked that month): salary + approved TA, DA and other expenses + incentives − deductions,
+  with visits, orders, new shops and cost-to-sales. Drafts can be regenerated and keep the
+  admin's deductions; Final and Paid reports are frozen. Finalising with claims still pending
+  needs a second click, because a claim approved after its month is finalised is not added to
+  any statement.
+- PDF statement per salesman (amounts shown as "Rs." since the built-in PDF fonts have no ₹
+  glyph) and one Excel sheet for all salesmen. Salesmen see their statement under Profile →
+  My month once it is final.
+
 ## Salesman field app (PWA)
 
 The salesman UI at `/app` is an installable PWA. Work recorded in the field (visits with

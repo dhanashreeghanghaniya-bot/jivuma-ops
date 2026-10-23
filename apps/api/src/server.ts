@@ -27,6 +27,8 @@ export function createServer(): Express {
         callback(ApiException.forbidden(`Origin ${origin} is not allowed`));
       },
       credentials: true,
+      // Lets the web app read the file name of PDF/Excel downloads.
+      exposedHeaders: ['Content-Disposition'],
     }),
   );
   app.use(express.json({ limit: '1mb' }));

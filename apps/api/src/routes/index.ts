@@ -16,6 +16,11 @@ import {
   policyRouter,
 } from '../modules/expenses/expenses.routes';
 import {
+  costReportRouter,
+  incentivesRouter,
+  salaryRouter,
+} from '../modules/payroll/payroll.routes';
+import {
   distributorsRouter,
   retailersRouter,
   superStockistsRouter,
@@ -27,7 +32,9 @@ import * as authController from '../modules/auth/auth.controller';
 
 export const apiV1Router = Router();
 
-apiV1Router.get('/health', (_req, res) => sendOk(res, { status: 'ok', at: new Date().toISOString() }));
+apiV1Router.get('/health', (_req, res) =>
+  sendOk(res, { status: 'ok', at: new Date().toISOString() }),
+);
 
 apiV1Router.use('/auth', authRouter);
 apiV1Router.get('/me', requireAuth, authController.me);
@@ -46,4 +53,7 @@ apiV1Router.use('/products', productsRouter);
 apiV1Router.use('/expenses', expensesRouter);
 apiV1Router.use('/settings/allowance-policy', policyRouter);
 apiV1Router.use('/notifications', notificationsRouter);
+apiV1Router.use('/salary-structures', salaryRouter);
+apiV1Router.use('/incentives', incentivesRouter);
+apiV1Router.use('/reports/monthly-cost', costReportRouter);
 apiV1Router.use('/import', importRouter);

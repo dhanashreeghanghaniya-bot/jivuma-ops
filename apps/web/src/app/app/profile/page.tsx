@@ -16,6 +16,7 @@ import { useAuth } from '@/lib/auth-context';
 import { formatPhone } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { useOutbox, visibleItems } from '@/features/field/offline/outbox';
+import { MyMonthCard } from '@/features/payroll/my-month';
 
 type ChangePasswordForm = z.input<typeof changePasswordSchema>;
 
@@ -56,6 +57,8 @@ export default function ProfilePage() {
           <CardDescription>{formatPhone(user?.phone)}</CardDescription>
         </CardHeader>
       </Card>
+
+      <MyMonthCard />
 
       <Card>
         <CardHeader>

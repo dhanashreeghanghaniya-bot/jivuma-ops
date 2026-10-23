@@ -610,9 +610,8 @@ async function seedSalaryAndIncentives(adminId: string) {
     });
   }
 
-  const lastMonth = new Date();
-  lastMonth.setUTCMonth(lastMonth.getUTCMonth() - 1);
-  const month = lastMonth.toISOString().slice(0, 7);
+  // The month the seeded field history falls in, so its cost report has an incentive.
+  const month = addDays(new Date(), -Math.ceil(HISTORY_DAYS / 2)).toISOString().slice(0, 7);
 
   await prisma.incentive.upsert({
     where: { id: sid('incentive', 'I1') },

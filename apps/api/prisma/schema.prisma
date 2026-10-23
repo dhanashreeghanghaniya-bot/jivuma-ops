@@ -915,6 +915,8 @@ model MonthlyCostReport {
   otherExpenses Decimal @default(0) @db.Decimal(12, 2)
   incentives    Decimal @default(0) @db.Decimal(12, 2)
   deductions    Decimal @default(0) @db.Decimal(12, 2)
+  /// What the deduction is for (advance recovered, etc.). Entered by the admin.
+  deductionNote String?
   grandTotal    Decimal @default(0) @db.Decimal(12, 2)
 
   ordersCount      Int      @default(0)

@@ -154,6 +154,39 @@ export const api = {
     apiRequest<T>(path, { ...options, method: 'DELETE' }),
 };
 
+/**
+ * Fetches a file (PDF, Excel) with the session and hands it to the browser as
+ * a download. Exports need the bearer token, so a plain link cannot do it.
+ */
+export async function downloadFile(path: string, query?: RequestOptions['query']): Promise<void> {
+  const get = () =>
+    fetch(buildUrl(path, query), {
+      credentials: 'include',
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+    });
+  let response = await get();
+  if (response.status === 401 && (await refreshAccessToken())) response = await get();
+  if (!response.ok) {
+    let error: ApiError | null = null;
+    try {
+      error = ((await response.json()) as ApiResponse<never>).error;
+    } catch {
+      // Not JSON.
+    }
+    throw new ApiRequestError(response.status, error);
+  }
+  const name =
+    /filename="([^"]+)"/.exec(response.headers.get('content-disposition') ?? '')?.[1] ?? 'download';
+  const url = URL.createObjectURL(await response.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
 // --- auth calls -------------------------------------------------------------
 
 export async function loginRequest(phone: string, password: string): Promise<LoginResponse> {
