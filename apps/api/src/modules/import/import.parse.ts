@@ -1,3 +1,4 @@
+import ExcelJS from 'exceljs';
 import type { ImportRow } from '@juma/shared';
 import { ApiException } from '../../lib/http';
 
@@ -52,6 +53,11 @@ export function parseCsv(text: string): ImportRow[] {
     rows.push(row);
   }
 
+  return toRecords(rows);
+}
+
+/** Drops blank lines, takes the first remaining line as headers and keys each row by them. */
+function toRecords(rows: string[][]): ImportRow[] {
   const nonEmpty = rows.filter((r) => r.some((cell) => cell.trim() !== ''));
   const headerRow = nonEmpty[0];
   if (!headerRow) throw ApiException.badRequest('The file is empty');
@@ -77,4 +83,54 @@ export function toCsv(headers: string[], rows: string[][]): string {
   const lines = [headers, ...rows].map((cells) => cells.map(csvCell).join(','));
   // Excel needs the BOM to read UTF-8 (Gujarati names) correctly.
   return `\uFEFF${lines.join('\r\n')}\r\n`;
+}
+
+export const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+/** Excel stores whole numbers as floats; this keeps 9876543210 from becoming 9.87e9. */
+function numberText(value: number): string {
+  return Number.isInteger(value) ? value.toFixed(0) : String(value);
+}
+
+/** Flattens every ExcelJS cell value shape to the plain text the CSV path would have given. */
+export function cellText(value: ExcelJS.CellValue): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return numberText(value);
+  if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
+  // Excel dates carry no zone; ExcelJS reads them as UTC midnight, so the UTC date is the cell's date.
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if ('richText' in value) return value.richText.map((part) => part.text).join('');
+  if ('formula' in value || 'sharedFormula' in value) {
+    const result = (value as ExcelJS.CellFormulaValue).result;
+    return result === undefined ||
+      (typeof result === 'object' && !(result instanceof Date) && 'error' in result)
+      ? ''
+      : cellText(result as ExcelJS.CellValue);
+  }
+  if ('hyperlink' in value) return cellText(value.text as ExcelJS.CellValue);
+  return '';
+}
+
+/**
+ * Reads the first worksheet of an .xlsx file into rows keyed by the header
+ * row, so an Excel upload goes through exactly the same checks as a CSV.
+ */
+export async function parseXlsx(buffer: Buffer): Promise<ImportRow[]> {
+  const book = new ExcelJS.Workbook();
+  try {
+    await book.xlsx.load(buffer as unknown as ArrayBuffer);
+  } catch {
+    throw ApiException.badRequest('This is not a readable Excel (.xlsx) file');
+  }
+  const sheet = book.worksheets[0];
+  if (!sheet) throw ApiException.badRequest('The file is empty');
+
+  const rows: string[][] = [];
+  sheet.eachRow({ includeEmpty: false }, (row) => {
+    const cells: string[] = [];
+    for (let col = 1; col <= row.cellCount; col++) cells.push(cellText(row.getCell(col).value));
+    rows.push(cells);
+  });
+  return toRecords(rows);
 }

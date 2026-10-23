@@ -40,9 +40,9 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown;
   /**
    * Sent verbatim instead of `body`, for endpoints that take something other
-   * than JSON (the bulk importer posts raw CSV). Set `Content-Type` yourself.
+   * than JSON (the bulk importer posts the CSV or .xlsx file). Set `Content-Type` yourself.
    */
-  rawBody?: string;
+  rawBody?: BodyInit;
   /** Query params; `undefined` and `''` values are dropped. */
   query?: Record<string, string | number | boolean | undefined | null>;
   /** Skips the automatic refresh-and-retry (used by the auth calls themselves). */

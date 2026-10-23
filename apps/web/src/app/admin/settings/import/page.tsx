@@ -82,7 +82,7 @@ function SummaryTile({
         tone === 'bad' && value > 0 && 'border-destructive/30 bg-destructive/5',
       )}
     >
-      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-muted-foreground text-xs">{label}</p>
       <p className="text-xl font-semibold tabular-nums">{formatNumber(value)}</p>
     </div>
   );
@@ -91,7 +91,7 @@ function SummaryTile({
 export default function ImportSettingsPage() {
   const [entity, setEntity] = useState<ImportEntity>(ImportEntity.TOWNS);
   const [fileName, setFileName] = useState<string | null>(null);
-  const [csv, setCsv] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [result, setResult] = useState<ImportCommitResult | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -103,7 +103,7 @@ export default function ImportSettingsPage() {
 
   const reset = () => {
     setFileName(null);
-    setCsv(null);
+    setFile(null);
     setPreview(null);
     setResult(null);
     if (fileInput.current) fileInput.current.value = '';
@@ -114,26 +114,25 @@ export default function ImportSettingsPage() {
     reset();
   };
 
-  const onFileChosen = async (file: File | undefined) => {
-    if (!file) return;
+  const onFileChosen = async (chosen: File | undefined) => {
+    if (!chosen) return;
     reset();
-    setFileName(file.name);
+    setFileName(chosen.name);
 
     try {
-      const text = await file.text();
-      setCsv(text);
-      const data = await previewMutation.mutateAsync({ entity, csv: text });
+      setFile(chosen);
+      const data = await previewMutation.mutateAsync({ entity, file: chosen });
       setPreview(data);
     } catch (err) {
-      setCsv(null);
+      setFile(null);
       toast.error(err instanceof ApiRequestError ? err.message : 'Could not read the file');
     }
   };
 
   const commit = async () => {
-    if (!csv) return;
+    if (!file) return;
     try {
-      const data = await commitMutation.mutateAsync({ entity, csv });
+      const data = await commitMutation.mutateAsync({ entity, file });
       setResult(data);
       setPreview(null);
       toast.success(`${data.created} created, ${data.updated} updated`);
@@ -150,9 +149,9 @@ export default function ImportSettingsPage() {
         <CardHeader>
           <CardTitle className="text-base">Bulk import</CardTitle>
           <CardDescription>
-            Upload a CSV to load geography, partners or leads in one go. Every row is validated
-            before anything is written, and you choose whether to proceed. Up to{' '}
-            {formatNumber(IMPORT_MAX_ROWS)} rows per file.
+            Upload an Excel (.xlsx) or CSV file to load geography, partners or leads in one go.
+            Every row is validated before anything is written, and you choose whether to proceed. Up
+            to {formatNumber(IMPORT_MAX_ROWS)} rows per file.
           </CardDescription>
         </CardHeader>
 
@@ -176,9 +175,20 @@ export default function ImportSettingsPage() {
               </Select>
             </div>
 
-            <Button variant="outline" onClick={() => downloadTemplate(entity)}>
+            <Button
+              variant="outline"
+              onClick={() =>
+                void downloadTemplate(entity).catch((err: unknown) =>
+                  toast.error(
+                    err instanceof ApiRequestError
+                      ? err.message
+                      : 'Could not download the template',
+                  ),
+                )
+              }
+            >
               <Download className="h-4 w-4" />
-              Download template
+              Excel template
             </Button>
 
             <Button onClick={() => fileInput.current?.click()} disabled={previewMutation.isPending}>
@@ -187,20 +197,20 @@ export default function ImportSettingsPage() {
               ) : (
                 <Upload className="h-4 w-4" />
               )}
-              {previewMutation.isPending ? 'Checking…' : 'Choose CSV'}
+              {previewMutation.isPending ? 'Checking…' : 'Choose file'}
             </Button>
 
             <input
               ref={fileInput}
               type="file"
-              accept=".csv,text/csv"
+              accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               className="sr-only"
               onChange={(e) => void onFileChosen(e.target.files?.[0])}
             />
           </div>
 
           {fileName ? (
-            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <p className="text-muted-foreground flex items-center gap-2 text-sm">
               <FileSpreadsheet className="h-4 w-4" />
               {fileName}
             </p>
@@ -228,11 +238,11 @@ export default function ImportSettingsPage() {
                         {column.required ? (
                           <Badge variant="outline">Required</Badge>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Optional</span>
+                          <span className="text-muted-foreground text-xs">Optional</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{column.hint}</TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
+                      <TableCell className="text-muted-foreground text-xs">{column.hint}</TableCell>
+                      <TableCell className="text-muted-foreground font-mono text-xs">
                         {column.example || '-'}
                       </TableCell>
                     </TableRow>
@@ -251,9 +261,7 @@ export default function ImportSettingsPage() {
               <CheckCircle2 className="h-5 w-5 text-emerald-600" />
               Import finished
             </CardTitle>
-            <CardDescription>
-              Coverage has been recomputed across every district.
-            </CardDescription>
+            <CardDescription>Coverage has been recomputed across every district.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-3">
@@ -283,7 +291,10 @@ export default function ImportSettingsPage() {
               <Button variant="outline" onClick={reset}>
                 Cancel
               </Button>
-              <Button onClick={() => void commit()} disabled={commitMutation.isPending || validRows === 0}>
+              <Button
+                onClick={() => void commit()}
+                disabled={commitMutation.isPending || validRows === 0}
+              >
                 {commitMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 {commitMutation.isPending
                   ? 'Importing…'
@@ -300,8 +311,8 @@ export default function ImportSettingsPage() {
             </div>
 
             {validRows === 0 ? (
-              <p className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+              <p className="border-destructive/30 bg-destructive/5 flex items-start gap-2 rounded-md border px-4 py-3 text-sm">
+                <AlertCircle className="text-destructive mt-0.5 h-4 w-4 shrink-0" />
                 Nothing in this file can be imported. Fix the problems below and upload it again.
               </p>
             ) : null}
@@ -322,7 +333,7 @@ export default function ImportSettingsPage() {
                       key={row.rowNumber}
                       className={cn(row.action === 'ERROR' && 'bg-destructive/5')}
                     >
-                      <TableCell className="tabular-nums text-muted-foreground">
+                      <TableCell className="text-muted-foreground tabular-nums">
                         {row.rowNumber}
                       </TableCell>
                       <TableCell>
@@ -331,9 +342,9 @@ export default function ImportSettingsPage() {
                       <TableCell className="text-sm">{row.summary}</TableCell>
                       <TableCell>
                         {row.issues.length === 0 ? (
-                          <span className="text-xs text-muted-foreground">-</span>
+                          <span className="text-muted-foreground text-xs">-</span>
                         ) : (
-                          <ul className="space-y-0.5 text-xs text-destructive">
+                          <ul className="text-destructive space-y-0.5 text-xs">
                             {row.issues.map((issue, index) => (
                               <li key={`${issue.column}-${index}`}>
                                 <span className="font-mono">{issue.column}</span>: {issue.message}

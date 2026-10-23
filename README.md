@@ -225,6 +225,16 @@ cannot both win. A distributor can only buy from its own super stockist.
 
 Sales and coverage export to Excel. All reports are admin-only.
 
+## Bulk import
+
+**Settings → Bulk import** loads towns, super stockists, distributors, retailers and leads
+(and updates districts) from an Excel (.xlsx) or CSV file, up to 5,000 rows. Download the
+Excel template for the chosen type: fill in the Data sheet (yellow headers are required, every
+cell is text so phone numbers and GSTINs stay as typed); the Columns sheet explains each
+column with an example. Only the first sheet of an uploaded workbook is read. Every row is
+checked first and the preview shows what will be created, updated or skipped and why; nothing
+is written until you press Import. Coverage is recomputed afterwards.
+
 ## Sales team
 
 **Sales team** (admin) is the field-force view:

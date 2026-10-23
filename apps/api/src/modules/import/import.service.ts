@@ -7,6 +7,7 @@ import {
   type ImportRow,
   type ImportRowResult,
 } from '@juma/shared';
+import ExcelJS from 'exceljs';
 import { prisma } from '../../lib/prisma';
 import { ApiException } from '../../lib/http';
 import { writeAuditLog } from '../../lib/audit';
@@ -106,4 +107,58 @@ export function template(entity: ImportEntity): string {
     columns.map((c) => c.key),
     [columns.map((c) => c.example)],
   );
+}
+
+/**
+ * The Excel template: a Data sheet with just the header row, every column
+ * formatted as text so Excel keeps phone numbers, GSTINs and coordinates as
+ * typed, and a Columns sheet explaining each one with an example. Examples
+ * live on the second sheet so an untouched template imports nothing.
+ */
+export async function templateXlsx(entity: ImportEntity): Promise<Buffer> {
+  const columns = IMPORT_COLUMNS[entity];
+  const book = new ExcelJS.Workbook();
+  book.creator = 'Juma Ops';
+
+  const data = book.addWorksheet('Data', { views: [{ state: 'frozen', ySplit: 1 }] });
+  data.columns = columns.map((c) => ({
+    header: c.key,
+    key: c.key,
+    width: Math.max(14, c.key.length + 4, Math.min(c.example.length + 4, 40)),
+    style: { numFmt: '@' },
+  }));
+  const header = data.getRow(1);
+  header.font = { bold: true };
+  header.eachCell((cell, col) => {
+    const required = columns[col - 1]?.required;
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: required ? 'FFFDE68A' : 'FFE8F1EC' },
+    };
+    cell.note = columns[col - 1]?.hint ?? '';
+  });
+
+  const help = book.addWorksheet('Columns');
+  help.columns = [
+    { header: 'Column', key: 'key', width: 26 },
+    { header: 'Required', key: 'required', width: 10 },
+    { header: 'Accepted values', key: 'hint', width: 48 },
+    { header: 'Example', key: 'example', width: 32 },
+  ];
+  help.getRow(1).font = { bold: true };
+  for (const c of columns) {
+    help.addRow({
+      key: c.key,
+      required: c.required ? 'Yes' : '',
+      hint: c.hint,
+      example: c.example,
+    });
+  }
+  help.addRow([]);
+  help.addRow(['Fill in the Data sheet: one row per record. Yellow headers are required.']).font = {
+    italic: true,
+  };
+
+  return Buffer.from(await book.xlsx.writeBuffer());
 }
