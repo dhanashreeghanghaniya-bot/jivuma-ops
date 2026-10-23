@@ -250,6 +250,13 @@ is written until you press Import. Coverage is recomputed afterwards.
 - **Day detail**: the day's route replayed on a drawn map (numbered visit markers, play and
   slider), a timeline with gaps and flags, and the day's km, visits, orders and claims.
 
+## Audit log
+
+**Settings → Audit log** lists every create, update and delete on partners, leads, orders,
+expenses, work days, users, policies and reports: who did it and when. Filter by record type,
+action, user or date; open a row to see each changed field before and after. Orders, partners
+and work days link to their page. Passwords are never written to the log.
+
 ## Salesman field app (PWA)
 
 The salesman UI at `/app` is an installable PWA. Work recorded in the field (visits with

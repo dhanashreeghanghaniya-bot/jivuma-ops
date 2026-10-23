@@ -11,6 +11,7 @@ const TABS = [
   { href: '/admin/settings/products', label: 'Products' },
   { href: '/admin/settings/geography', label: 'Districts & towns' },
   { href: '/admin/settings/import', label: 'Bulk import' },
+  { href: '/admin/settings/audit', label: 'Audit log' },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
@@ -20,9 +21,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Users, policies, products and master data.
-        </p>
+        <p className="text-muted-foreground text-sm">Users, policies, products and master data.</p>
       </div>
 
       <nav className="flex flex-wrap gap-1 border-b">
@@ -34,7 +33,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
               '-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors',
               pathname === tab.href
                 ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground',
+                : 'text-muted-foreground hover:text-foreground border-transparent',
             )}
           >
             {tab.label}

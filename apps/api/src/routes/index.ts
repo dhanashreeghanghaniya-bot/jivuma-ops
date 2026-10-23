@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { auditRouter } from '../modules/audit/audit.routes';
 import { authRouter } from '../modules/auth/auth.routes';
 import { geoRouter } from '../modules/geo/geo.routes';
 import { importRouter } from '../modules/import/import.routes';
@@ -61,3 +62,4 @@ apiV1Router.use('/reports/monthly-cost', costReportRouter);
 apiV1Router.use('/reports', reportsRouter);
 apiV1Router.use('/sales-team', salesTeamRouter);
 apiV1Router.use('/import', importRouter);
+apiV1Router.use('/audit-logs', auditRouter);

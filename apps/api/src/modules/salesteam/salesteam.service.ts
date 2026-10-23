@@ -285,7 +285,10 @@ export async function updateBeat(
   input: BeatInput,
   actorId: string,
 ): Promise<SalesmanProfile> {
-  const beat = await prisma.beat.findFirst({ where: { id: beatId, deletedAt: null } });
+  const beat = await prisma.beat.findFirst({
+    where: { id: beatId, deletedAt: null },
+    include: { stops: { select: { retailerId: true }, orderBy: { sequence: 'asc' } } },
+  });
   if (!beat) throw ApiException.notFound('Beat not found');
   const shops = await assertBeatShops(beat.salesmanId, input.retailerIds);
   const townOf = new Map(shops.map((s) => [s.id, s.townId]));
@@ -312,6 +315,11 @@ export async function updateBeat(
     action: 'UPDATE',
     entity: 'Beat',
     entityId: beatId,
+    before: {
+      name: beat.name,
+      dayOfWeek: beat.dayOfWeek,
+      retailerIds: beat.stops.map((stop) => stop.retailerId),
+    },
     after: input,
   });
   return profile(beat.salesmanId);
@@ -327,6 +335,7 @@ export async function retireBeat(beatId: string, actorId: string): Promise<Sales
     action: 'UPDATE',
     entity: 'Beat',
     entityId: beatId,
+    before: { isActive: beat.isActive },
     after: { isActive: false },
   });
   return profile(beat.salesmanId);
