@@ -63,6 +63,23 @@ this database. Both create test users, and the tests delete their own data.
 3. Deploy. The pre-deploy step runs `prisma migrate deploy` each release. Check that
    `https://<service>.onrender.com/api/v1/health` returns `{"data":{"status":"ok",...}}`.
 
+### Alternative: API on Google Cloud Run
+
+The root `Dockerfile` packages the API alone for Cloud Run, which scales to zero when idle
+and runs in Mumbai (`asia-south1`), next to the database.
+
+1. Cloud Run → Deploy container → **Continuously deploy from a repository**, set up with
+   Cloud Build: this repository, branch `^main$`, build type **Dockerfile** at `/Dockerfile`.
+2. Region `asia-south1`, **Allow public access**, billing **request-based**, minimum
+   instances 0.
+3. Variables: `NODE_ENV=production`, `TRUST_PROXY_HOPS=2`, `COOKIE_SECURE=true`,
+   `COOKIE_SAMESITE=lax`, `SUPABASE_STORAGE_BUCKET=juma-files`, and the same values Render
+   asks for in step 2 above. Generate each JWT secret with `openssl rand -base64 48`.
+4. Cloud Run has no pre-deploy step: apply new migrations from your machine with
+   `pnpm db:deploy` before pushing a schema change.
+
+Use the service URL (`https://<service>-<hash>.asia-south1.run.app`) as `API_PROXY_URL` below.
+
 ## 3. Web on Vercel
 
 1. Vercel → Add New → Project, pick this repository, and set **Root Directory** to `apps/web`.
