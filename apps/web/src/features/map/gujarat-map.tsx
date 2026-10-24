@@ -58,7 +58,8 @@ function DistrictChoropleth({
   // GeoJSON, which would stack duplicate features on every render.
   const statusByCode = useMemo(() => {
     const index = new Map<string, CoverageStatus>();
-    for (const district of districts) index.set(district.code.toUpperCase(), district.coverageStatus);
+    for (const district of districts)
+      index.set(district.code.toUpperCase(), district.coverageStatus);
     return index;
   }, [districts]);
 
@@ -145,7 +146,9 @@ function DistrictCircles({
     const circles = districts.map((district) => {
       const style = COVERAGE_STYLES[district.coverageStatus];
       const weight =
-        district.counts.distributors * 3 + district.counts.superStockists * 2 + district.counts.openLeads;
+        district.counts.distributors * 3 +
+        district.counts.superStockists * 2 +
+        district.counts.openLeads;
       const isSelected = district.code === selectedDistrictCode;
 
       const circle = new google.maps.Circle({
@@ -195,21 +198,31 @@ function ClusteredRetailers({
     clusterer.current.addMarkers(Object.values(nodes));
   }, [nodes]);
 
-  const setNodeRef = useCallback(
-    (id: string) => (node: google.maps.marker.AdvancedMarkerElement | null) => {
-      setNodes((current) => {
-        if (node) {
-          if (current[id] === node) return current;
-          return { ...current, [id]: node };
-        }
-        if (!(id in current)) return current;
-        const next = { ...current };
-        delete next[id];
-        return next;
-      });
-    },
-    [],
+  // One callback per marker id, kept across renders. A fresh function each
+  // render makes React detach and reattach every ref, which updates `nodes`,
+  // which renders again: an endless loop.
+  const refCallbacks = useRef(
+    new Map<string, (node: google.maps.marker.AdvancedMarkerElement | null) => void>(),
   );
+  const setNodeRef = useCallback((id: string) => {
+    let callback = refCallbacks.current.get(id);
+    if (!callback) {
+      callback = (node) => {
+        setNodes((current) => {
+          if (node) {
+            if (current[id] === node) return current;
+            return { ...current, [id]: node };
+          }
+          if (!(id in current)) return current;
+          const next = { ...current };
+          delete next[id];
+          return next;
+        });
+      };
+      refCallbacks.current.set(id, callback);
+    }
+    return callback;
+  }, []);
 
   const style = LAYER_STYLES.retailers;
 
@@ -300,18 +313,18 @@ function MarkerInfo({
   return (
     <InfoWindow position={{ lat: marker.lat, lng: marker.lng }} onCloseClick={onClose}>
       <div className="min-w-48 space-y-1 p-1 text-sm">
-        <p className="font-semibold text-foreground">{marker.name}</p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-foreground font-semibold">{marker.name}</p>
+        <p className="text-muted-foreground text-xs">
           {LAYER_STYLES[layer].label} &middot; {marker.townName}
         </p>
-        {marker.status ? <p className="text-xs text-muted-foreground">{marker.status}</p> : null}
+        {marker.status ? <p className="text-muted-foreground text-xs">{marker.status}</p> : null}
         {marker.phone ? (
           <p className="flex gap-3 pt-1 text-xs">
-            <a className="font-medium text-primary underline" href={telHref(marker.phone)}>
+            <a className="text-primary font-medium underline" href={telHref(marker.phone)}>
               {formatPhone(marker.phone)}
             </a>
             <a
-              className="font-medium text-primary underline"
+              className="text-primary font-medium underline"
               href={whatsAppHref(marker.phone)}
               target="_blank"
               rel="noreferrer"
@@ -391,7 +404,7 @@ export function GujaratMap({
           <MarkerInfo selected={selectedMarker} onClose={() => setSelectedMarker(null)} />
         </GoogleMap>
 
-        <div className="absolute left-3 top-3 flex overflow-hidden rounded-md border bg-background shadow-sm">
+        <div className="bg-background absolute left-3 top-3 flex overflow-hidden rounded-md border shadow-sm">
           {(['roadmap', 'hybrid'] as const).map((type) => (
             <Button
               key={type}
