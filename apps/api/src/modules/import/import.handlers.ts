@@ -9,6 +9,7 @@ import {
   RetailerCategory,
   TownType,
   createDistributorSchema,
+  createProductSchema,
   createRetailerSchema,
   createSuperStockistSchema,
   createTownSchema,
@@ -19,6 +20,7 @@ import {
   type ImportRowIssue,
 } from '@juma/shared';
 import { prisma } from '../../lib/prisma';
+import { productData } from '../orders/products.service';
 import type { EntityHandler, ImportContext, RowOutcome } from './import.types';
 
 const cell = (row: ImportRow, key: string): string => (row[key] ?? '').trim();
@@ -271,6 +273,67 @@ const superStockistsHandler: EntityHandler<SuperStockistValue> = {
 };
 
 // ---------------------------------------------------------------------------
+// products
+// ---------------------------------------------------------------------------
+
+type ProductValue = z.infer<typeof createProductSchema>;
+
+const productsHandler: EntityHandler<ProductValue> = {
+  parseRow: (row, ctx) => {
+    const active = cell(row, 'isActive').toUpperCase();
+    if (active && active !== 'YES' && active !== 'NO') {
+      return fail([{ column: 'isActive', message: 'Use YES or NO' }]);
+    }
+    const parsed = createProductSchema.safeParse({
+      name: cell(row, 'name'),
+      sku: cell(row, 'sku'),
+      category: cell(row, 'category'),
+      packSize: cell(row, 'packSize'),
+      unitsPerCase: cell(row, 'unitsPerCase'),
+      mrp: cell(row, 'mrp'),
+      retailMargin: cell(row, 'retailMargin'),
+      distributorMargin: cell(row, 'distributorMargin'),
+      ssMargin: cell(row, 'ssMargin'),
+      isActive: active !== 'NO',
+    });
+    if (!parsed.success) return fail(zodIssues(parsed.error));
+
+    const isUpdate = ctx.existingSkus.has(parsed.data.sku);
+    return {
+      issues: [],
+      value: parsed.data,
+      summary: `${isUpdate ? 'Update' : 'Create'} ${parsed.data.name} (${parsed.data.sku})`,
+      isUpdate,
+    };
+  },
+  apply: async (values) => {
+    const existing = new Set(
+      (
+        await prisma.product.findMany({
+          where: { sku: { in: values.map((v) => v.sku) } },
+          select: { sku: true },
+        })
+      ).map((p) => p.sku),
+    );
+    let created = 0;
+    let updated = 0;
+    for (const value of values) {
+      const data = productData(value);
+      await prisma.product.upsert({
+        where: { sku: value.sku },
+        create: data,
+        update: { ...data, deletedAt: null },
+      });
+      if (existing.has(value.sku)) updated++;
+      else {
+        existing.add(value.sku);
+        created++;
+      }
+    }
+    return { created, updated };
+  },
+};
+
 // distributors
 // ---------------------------------------------------------------------------
 
@@ -519,15 +582,17 @@ export const HANDLERS: Record<ImportEntity, EntityHandler<any>> = {
   [ImportEntity.DISTRIBUTORS]: distributorsHandler,
   [ImportEntity.RETAILERS]: retailersHandler,
   [ImportEntity.LEADS]: leadsHandler,
+  [ImportEntity.PRODUCTS]: productsHandler,
 };
 
 /** One batch of lookups serves every row in the file. */
 export async function buildImportContext(): Promise<ImportContext> {
-  const [districts, towns, superStockists, distributors] = await Promise.all([
+  const [districts, towns, superStockists, distributors, products] = await Promise.all([
     prisma.district.findMany({ where: { deletedAt: null }, select: { id: true, name: true, code: true } }),
     prisma.town.findMany({ where: { deletedAt: null }, select: { id: true, name: true, districtId: true } }),
     prisma.superStockist.findMany({ where: { deletedAt: null }, select: { id: true, firmName: true } }),
     prisma.distributor.findMany({ where: { deletedAt: null }, select: { id: true, firmName: true } }),
+    prisma.product.findMany({ select: { sku: true } }),
   ]);
 
   return {
@@ -537,5 +602,6 @@ export async function buildImportContext(): Promise<ImportContext> {
     ),
     superStockistsByFirm: new Map(superStockists.map((s) => [s.firmName.toLowerCase(), s])),
     distributorsByFirm: new Map(distributors.map((d) => [d.firmName.toLowerCase(), d])),
+    existingSkus: new Set(products.map((p) => p.sku)),
   };
 }

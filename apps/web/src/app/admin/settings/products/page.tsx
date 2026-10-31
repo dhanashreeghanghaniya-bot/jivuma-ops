@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { Pencil, Plus } from 'lucide-react';
 import type { ProductItem } from '@juma/shared';
@@ -40,10 +41,15 @@ export default function ProductSettingsPage() {
             SKUs, pack sizes and the four price tiers used across the chain.
           </p>
         </div>
-        <Button onClick={() => setCreating(true)}>
-          <Plus className="h-4 w-4" />
-          Add product
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/admin/settings/import?entity=products">Bulk upload</Link>
+          </Button>
+          <Button onClick={() => setCreating(true)}>
+            <Plus className="h-4 w-4" />
+            Add product
+          </Button>
+        </div>
       </div>
 
       <Card>

@@ -7,6 +7,7 @@ export interface ImportContext {
   townsByDistrictAndName: Map<string, { id: string; name: string }>;
   superStockistsByFirm: Map<string, { id: string; firmName: string }>;
   distributorsByFirm: Map<string, { id: string; firmName: string }>;
+  existingSkus: Set<string>;
 }
 
 export interface RowOutcome<T> {

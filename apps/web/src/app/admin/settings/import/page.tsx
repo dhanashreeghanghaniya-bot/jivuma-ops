@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
   CheckCircle2,
@@ -48,9 +48,11 @@ const ENTITY_LABELS: Record<ImportEntity, string> = {
   distributors: 'Distributors',
   retailers: 'Retailers',
   leads: 'Leads',
+  products: 'Products',
 };
 
 const ENTITY_ORDER: ImportEntity[] = [
+  'products',
   'towns',
   'super-stockists',
   'distributors',
@@ -90,6 +92,10 @@ function SummaryTile({
 
 export default function ImportSettingsPage() {
   const [entity, setEntity] = useState<ImportEntity>(ImportEntity.TOWNS);
+  useEffect(() => {
+    const asked = new URLSearchParams(window.location.search).get('entity');
+    if (asked && ENTITY_ORDER.includes(asked as ImportEntity)) setEntity(asked as ImportEntity);
+  }, []);
   const [fileName, setFileName] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
@@ -149,7 +155,7 @@ export default function ImportSettingsPage() {
         <CardHeader>
           <CardTitle className="text-base">Bulk import</CardTitle>
           <CardDescription>
-            Upload an Excel (.xlsx) or CSV file to load geography, partners or leads in one go.
+            Upload an Excel (.xlsx) or CSV file to load products, geography, partners or leads in one go.
             Every row is validated before anything is written, and you choose whether to proceed. Up
             to {formatNumber(IMPORT_MAX_ROWS)} rows per file.
           </CardDescription>

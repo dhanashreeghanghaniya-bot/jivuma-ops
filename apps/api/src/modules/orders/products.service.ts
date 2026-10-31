@@ -42,7 +42,7 @@ export async function list(q: ListProductsQuery, isAdmin: boolean): Promise<Prod
   return rows.map(toItem);
 }
 
-function data(input: CreateProductInput) {
+export function productData(input: CreateProductInput) {
   const prices = tierPrices(input);
   return {
     name: input.name,
@@ -66,7 +66,7 @@ const duplicateSku = (err: unknown) =>
 
 export async function create(input: CreateProductInput, actorId: string): Promise<ProductItem> {
   try {
-    const row = await prisma.product.create({ data: data(input), include });
+    const row = await prisma.product.create({ data: productData(input), include });
     await writeAuditLog({
       userId: actorId,
       action: 'CREATE',
@@ -93,7 +93,7 @@ export async function update(
   const before = await prisma.product.findFirst({ where: { id, deletedAt: null }, include });
   if (!before) throw ApiException.notFound('Product not found');
   try {
-    const row = await prisma.product.update({ where: { id }, data: data(input), include });
+    const row = await prisma.product.update({ where: { id }, data: productData(input), include });
     await writeAuditLog({
       userId: actorId,
       action: 'UPDATE',

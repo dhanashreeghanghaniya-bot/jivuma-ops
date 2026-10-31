@@ -8,6 +8,7 @@ export const ImportEntity = {
   RETAILERS: 'retailers',
   LEADS: 'leads',
   DISTRICTS: 'districts',
+  PRODUCTS: 'products',
 } as const;
 export type ImportEntity = (typeof ImportEntity)[keyof typeof ImportEntity];
 
@@ -70,6 +71,18 @@ export interface ImportColumn {
 }
 
 export const IMPORT_COLUMNS: Record<ImportEntity, ImportColumn[]> = {
+  products: [
+    { key: 'name', required: true, hint: 'Product name', example: 'Juma Aloo Bhujia' },
+    { key: 'sku', required: true, hint: 'Unique code; an existing SKU is updated', example: 'JF-ABJ-150' },
+    { key: 'category', required: true, hint: 'Category', example: 'Namkeen' },
+    { key: 'packSize', required: true, hint: 'Pack size', example: '150 g' },
+    { key: 'unitsPerCase', required: true, hint: 'Whole number', example: '30' },
+    { key: 'mrp', required: true, hint: 'Rupees per unit, including GST', example: '100' },
+    { key: 'retailMargin', required: true, hint: 'Percent, off MRP', example: '20' },
+    { key: 'distributorMargin', required: true, hint: 'Percent, off retailer price', example: '8' },
+    { key: 'ssMargin', required: true, hint: 'Percent, off distributor price', example: '5' },
+    { key: 'isActive', required: false, hint: 'YES | NO (default YES)', example: 'YES' },
+  ],
   districts: [
     { key: 'code', required: true, hint: 'Existing district code', example: 'RJT' },
     { key: 'nameGu', required: false, hint: 'Gujarati name', example: 'રાજકોટ' },

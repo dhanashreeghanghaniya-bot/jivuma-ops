@@ -44,7 +44,8 @@ Keep the current project as the development/staging database. Production gets it
 
    It creates the 33 districts, 18 main towns and the allowance policy (edit it under Settings).
    Load the remaining towns with **Settings → Bulk import** (Towns).
-   Products, salesmen and partners are added in the app or with **Settings → Bulk import**.
+   Products and partners are added in the app or with **Settings → Bulk import**. Salesmen are
+   added one at a time under **Settings → Users**.
 7. Copy the project URL and the **secret** key (Project Settings → API Keys) for the API.
 
 Never run the development seed (without `SEED_SCOPE=base`) or the Playwright tests against
