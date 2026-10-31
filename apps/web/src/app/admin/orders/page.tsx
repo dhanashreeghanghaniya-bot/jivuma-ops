@@ -230,6 +230,7 @@ export default function OrdersPage() {
                         <TableCell>
                           <Link
                             href={`/admin/orders/${o.id}`}
+                            prefetch={false}
                             className="font-medium tabular-nums hover:underline"
                           >
                             {o.orderNumber}

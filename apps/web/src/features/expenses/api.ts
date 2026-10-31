@@ -119,7 +119,6 @@ export function useNotifications() {
     queryKey: ['notifications'],
     queryFn: async () => (await api.get<NotificationList>('/notifications')).data,
     refetchInterval: 60_000,
-    refetchOnWindowFocus: true,
   });
 }
 

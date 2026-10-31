@@ -7,6 +7,8 @@ import {
 } from 'express';
 import {
   Role,
+  addBeatStopSchema,
+  beatSchema,
   attachVisitPhotosSchema,
   createVisitSchema,
   endWorkDaySchema,
@@ -18,6 +20,8 @@ import {
   reviewWorkDaySchema,
   signedReadSchema,
   startWorkDaySchema,
+  type AddBeatStopInput,
+  type BeatInput,
   type AttachVisitPhotosInput,
   type CreateVisitInput,
   type EndWorkDayInput,
@@ -28,6 +32,7 @@ import {
   type SignedReadInput,
   type StartWorkDayInput,
 } from '@juma/shared';
+import * as team from '../salesteam/salesteam.service';
 import { ApiException, sendOk } from '../../lib/http';
 import { isStorageConfigured, presignUpload, signedReadUrls } from '../../lib/storage';
 import { requireAdmin, requireAuth, requireRole } from '../../middleware/auth';
@@ -168,6 +173,23 @@ fieldRouter.post(
   wrap(async (req, res) =>
     sendOk(res, await field.createLead(me(req), req.body as FieldLeadInput), null, 201),
   ),
+);
+// Salesmen plan their own routes; no approval step for now.
+fieldRouter.post(
+  '/beats',
+  validateBody(beatSchema),
+  wrap(async (req, res) => {
+    await team.createBeat(me(req), req.body as BeatInput, me(req));
+    return sendOk(res, { created: true }, null, 201);
+  }),
+);
+fieldRouter.post(
+  '/beats/:id/stops',
+  validateBody(addBeatStopSchema),
+  wrap(async (req, res) => {
+    const { retailerId } = req.body as AddBeatStopInput;
+    return sendOk(res, await field.addBeatStop(me(req), req.params.id as string, retailerId));
+  }),
 );
 
 // --- /uploads --------------------------------------------------------------

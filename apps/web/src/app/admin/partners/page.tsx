@@ -298,6 +298,7 @@ function PartnersContent() {
                         <TableCell>
                           <Link
                             href={`/admin/partners/super-stockists/${ss.id}`}
+                            prefetch={false}
                             className="font-medium text-primary underline-offset-2 hover:underline"
                           >
                             {ss.firmName}
@@ -351,6 +352,7 @@ function PartnersContent() {
                         <TableCell>
                           <Link
                             href={`/admin/partners/distributors/${d.id}`}
+                            prefetch={false}
                             className="font-medium text-primary underline-offset-2 hover:underline"
                           >
                             {d.firmName}
@@ -410,6 +412,7 @@ function PartnersContent() {
                         <TableCell>
                           <Link
                             href={`/admin/partners/retailers/${r.id}`}
+                            prefetch={false}
                             className="font-medium text-primary underline-offset-2 hover:underline"
                           >
                             {r.shopName}

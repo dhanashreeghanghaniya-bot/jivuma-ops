@@ -45,6 +45,11 @@ export const storagePathSchema = z
 
 const odometerSchema = z.coerce.number().int().min(0).max(9_999_999).nullish();
 
+export const addBeatStopSchema = z.object({
+  retailerId: idSchema,
+});
+export type AddBeatStopInput = z.infer<typeof addBeatStopSchema>;
+
 export const startWorkDaySchema = z.object({
   location: gpsFixSchema,
   dayType: z.enum(FIELD_DAY_TYPES),

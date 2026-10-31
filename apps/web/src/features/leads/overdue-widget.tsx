@@ -46,6 +46,7 @@ export function OverdueFollowUpsCard() {
             <Link
               key={lead.id}
               href="/admin/leads?overdue=1"
+              prefetch={false}
               className="hover:bg-muted flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm transition"
             >
               <span className="min-w-0">

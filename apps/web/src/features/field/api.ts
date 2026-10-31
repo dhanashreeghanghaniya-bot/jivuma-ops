@@ -1,3 +1,4 @@
+import type { BeatInput } from '@juma/shared';
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -109,6 +110,36 @@ export function useStorageStatus() {
     queryKey: fieldKeys.storage,
     queryFn: async () => (await api.get<{ configured: boolean }>('/uploads/status')).data,
     staleTime: 5 * 60_000,
+  });
+}
+
+export function useAddBeatStop(beatId?: string | null) {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (retailerId: string) =>
+      (
+        await api.post<FieldBootstrap['beats'][number]>(`/field/beats/${beatId}/stops`, {
+          retailerId,
+        })
+      ).data,
+    onSuccess: (updatedBeat) => {
+      qc.setQueryData<FieldBootstrap & { fromCache?: boolean }>(fieldKeys.bootstrap, (prev) => {
+        if (!prev) return prev;
+        const updatedBeats = prev.beats.map((b) => (b.id === updatedBeat.id ? updatedBeat : b));
+        const next = { ...prev, beats: updatedBeats };
+        if (user?.id) void writeCache(`bootstrap:${user.id}`, next);
+        return next;
+      });
+    },
+  });
+}
+
+export function useCreateBeat() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: BeatInput) => (await api.post('/field/beats', input)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: fieldKeys.bootstrap }),
   });
 }
 

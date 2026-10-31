@@ -64,6 +64,7 @@ export default function SalesTeamPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <Link
                     href={`/admin/sales-team/${s.salesman.id}`}
+                    prefetch={false}
                     className="font-medium hover:underline"
                   >
                     {s.salesman.name}
@@ -114,6 +115,7 @@ export default function SalesTeamPage() {
                 {s.workDayId ? (
                   <Link
                     href={`/admin/sales-team/days/${s.workDayId}`}
+                    prefetch={false}
                     className="text-primary inline-flex items-center text-sm hover:underline"
                   >
                     Today&apos;s route
@@ -167,6 +169,7 @@ export default function SalesTeamPage() {
             <Link
               key={`${f.workDayId}-${f.kind}-${i}`}
               href={`/admin/sales-team/days/${f.workDayId}`}
+              prefetch={false}
               className="hover:bg-muted flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm transition"
             >
               <span className="flex items-center gap-2">

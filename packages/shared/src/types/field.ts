@@ -36,6 +36,15 @@ export interface FieldBootstrap {
   beats: { id: string; name: string; dayOfWeek: number | null; stops: FieldBeatStop[] }[];
 }
 
+export interface RetailerCallHistory {
+  lastVisitAt: string | null;
+  lastVisitOutcome: VisitOutcome | null;
+  lastOrderAt: string | null;
+  lastOrderAmount: number | null;
+  lastOrderNumber: string | null;
+  isProductive: boolean;
+}
+
 export interface FieldRetailer {
   id: string;
   shopName: string;
@@ -48,6 +57,7 @@ export interface FieldRetailer {
   category: RetailerCategory;
   distributorId: string;
   isVerified: boolean;
+  callHistory?: RetailerCallHistory;
 }
 
 export interface FieldProduct {

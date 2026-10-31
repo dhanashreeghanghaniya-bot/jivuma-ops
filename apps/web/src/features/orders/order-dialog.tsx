@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { OrderLevel, PRICE_TIER, type CreateOrderInput } from '@juma/shared';
+import { OrderLevel, PRICE_TIER, type CreateOrderInput, type RetailerListItem } from '@juma/shared';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -71,6 +71,7 @@ export function NewOrderDialog({
   const [superStockistId, setSuperStockistId] = useState('');
   const [distributorId, setDistributorId] = useState('');
   const [retailerId, setRetailerId] = useState('');
+  const [selectedRetailer, setSelectedRetailer] = useState<RetailerListItem | null>(null);
   const [shopSearch, setShopSearch] = useState('');
   const [qty, setQty] = useState<Qty>({});
   const [expectedDelivery, setExpectedDelivery] = useState('');
@@ -83,6 +84,7 @@ export function NewOrderDialog({
     setSuperStockistId('');
     setDistributorId('');
     setRetailerId('');
+    setSelectedRetailer(null);
     setShopSearch('');
     setQty({});
     setExpectedDelivery('');
@@ -130,10 +132,16 @@ export function NewOrderDialog({
     setSuperStockistId('');
     setDistributorId('');
     setRetailerId('');
+    setSelectedRetailer(null);
+    setShopSearch('');
     setErrors({});
   };
 
   const submit = async () => {
+    if (lines.length === 0) {
+      toast.error('Please enter quantity for at least one product');
+      return;
+    }
     const input: CreateOrderInput = {
       level,
       superStockistId:
@@ -269,34 +277,67 @@ export function NewOrderDialog({
             {level === OrderLevel.DISTRIBUTOR_TO_RETAILER ? (
               <div className="space-y-1.5">
                 <Label>To shop</Label>
-                <Input
-                  placeholder={
-                    distributorId ? "Search this distributor's shops" : 'Pick the distributor first'
-                  }
-                  value={shopSearch}
-                  onChange={(e) => setShopSearch(e.target.value)}
-                  disabled={!distributorId}
-                />
-                {distributorId ? (
-                  <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border p-1">
-                    {(retailers.data?.items ?? []).map((r) => (
-                      <button
-                        key={r.id}
-                        type="button"
-                        onClick={() => setRetailerId(r.id)}
-                        className={cn(
-                          'hover:bg-muted w-full rounded px-2 py-1.5 text-left text-sm',
-                          retailerId === r.id && 'bg-primary/10 font-medium',
-                        )}
-                      >
-                        {r.shopName} <span className="text-muted-foreground">· {r.town.name}</span>
-                      </button>
-                    ))}
-                    {retailers.data && retailers.data.items.length === 0 ? (
-                      <p className="text-muted-foreground px-2 py-1.5 text-sm">No shops match.</p>
+                {selectedRetailer ? (
+                  <div className="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{selectedRetailer.shopName}</p>
+                      <p className="text-muted-foreground truncate text-xs">
+                        {selectedRetailer.ownerName} · {selectedRetailer.town.name}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setRetailerId('');
+                        setSelectedRetailer(null);
+                        setShopSearch('');
+                      }}
+                    >
+                      Change
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <Input
+                      placeholder={
+                        distributorId
+                          ? "Search this distributor's shops"
+                          : 'Pick the distributor first'
+                      }
+                      value={shopSearch}
+                      onChange={(e) => setShopSearch(e.target.value)}
+                      disabled={!distributorId}
+                      autoFocus
+                    />
+                    {distributorId ? (
+                      <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border p-1 shadow-sm">
+                        {(retailers.data?.items ?? []).map((r) => (
+                          <button
+                            key={r.id}
+                            type="button"
+                            onClick={() => {
+                              setRetailerId(r.id);
+                              setSelectedRetailer(r);
+                              setShopSearch('');
+                            }}
+                            className={cn(
+                              'hover:bg-muted w-full rounded px-2 py-1.5 text-left text-sm transition-colors',
+                              retailerId === r.id && 'bg-primary/10 font-medium',
+                            )}
+                          >
+                            {r.shopName}{' '}
+                            <span className="text-muted-foreground">· {r.town.name}</span>
+                          </button>
+                        ))}
+                        {retailers.data && retailers.data.items.length === 0 ? (
+                          <p className="text-muted-foreground px-2 py-1.5 text-sm">No shops match.</p>
+                        ) : null}
+                      </div>
                     ) : null}
                   </div>
-                ) : null}
+                )}
                 {errors.retailerId ? (
                   <p className="text-destructive text-sm">{errors.retailerId}</p>
                 ) : null}
@@ -375,10 +416,14 @@ export function NewOrderDialog({
             <span className="font-semibold tabular-nums">{formatINR(total, true)}</span>
           </p>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button onClick={() => void submit()} disabled={create.isPending || lines.length === 0}>
+            <Button
+              type="button"
+              onClick={() => void submit()}
+              disabled={create.isPending || lines.length === 0}
+            >
               {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Place order
             </Button>

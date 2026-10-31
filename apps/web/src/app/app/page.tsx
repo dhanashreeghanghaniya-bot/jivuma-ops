@@ -44,6 +44,8 @@ import { newUuid } from '@/features/field/offline/outbox';
 import { PhotoCapture, type CapturedPhoto } from '@/features/field/photo-input';
 import { useDayVisits } from '@/features/field/use-day-visits';
 import { DaySummaryCard, Stat } from '@/features/field/day-summary';
+import { AddShopToRouteDialog } from '@/features/field/add-shop-dialog';
+import { CreateBeatDialog } from '@/features/field/create-beat-dialog';
 
 const errorMessage = (err: unknown, t: (key: TranslationKey) => string) =>
   err instanceof ApiRequestError ? err.message : t('common.noSignalDay');
@@ -58,6 +60,7 @@ function StartDayCard({ bootstrap }: { bootstrap: FieldBootstrap | undefined }) 
 
   const [dayType, setDayType] = useState<(typeof FIELD_DAY_TYPES)[number]>('HQ');
   const [beatId, setBeatId] = useState<string | null | undefined>(undefined);
+  const [creatingBeat, setCreatingBeat] = useState(false);
   const [odometer, setOdometer] = useState('');
   const [photo, setPhoto] = useState<CapturedPhoto | null>(null);
   const [locating, setLocating] = useState(false);
@@ -154,6 +157,26 @@ function StartDayCard({ bootstrap }: { bootstrap: FieldBootstrap | undefined }) 
           </div>
         ) : null}
 
+        {bootstrap ? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-12 w-full"
+              onClick={() => setCreatingBeat(true)}
+            >
+              {t('beat.create')}
+            </Button>
+            {creatingBeat ? (
+              <CreateBeatDialog
+                open={creatingBeat}
+                onOpenChange={setCreatingBeat}
+                retailers={bootstrap.retailers}
+              />
+            ) : null}
+          </>
+        ) : null}
+
         <div className="space-y-2">
           <Label htmlFor="start-odo">{t('common.odometerOptional')}</Label>
           <div className="flex items-start gap-3">
@@ -243,6 +266,7 @@ function ActiveDay({
   bootstrap: FieldBootstrap | undefined;
 }) {
   const t = useT();
+  const [showAddShop, setShowAddShop] = useState(false);
   const { totals } = useDayVisits(istToday());
   const beat = bootstrap?.beats.find((b) => b.id === day.beat?.id);
   const retailers = useMemo(() => new Map(bootstrap?.retailers.map((r) => [r.id, r])), [bootstrap]);
@@ -250,6 +274,20 @@ function ActiveDay({
     () => new Map(bootstrap?.towns.map((town) => [town.id, town])),
     [bootstrap],
   );
+
+  const currentRetailerIds = useMemo(
+    () => new Set(beat?.stops.map((s) => s.retailerId).filter((id): id is string => Boolean(id))),
+    [beat],
+  );
+
+  const doneCalls = beat
+    ? beat.stops.filter((s) => s.retailerId && totals.visitedRetailerIds.has(s.retailerId)).length
+    : 0;
+  const productiveCalls = beat
+    ? beat.stops.filter(
+        (s) => s.retailerId && retailers.get(s.retailerId)?.callHistory?.isProductive,
+      ).length
+    : 0;
 
   return (
     <div className="space-y-4">
@@ -295,19 +333,62 @@ function ActiveDay({
       {beat ? (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">{beat.name}</CardTitle>
-            <CardDescription>{t('active.plannedStops')}</CardDescription>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <CardTitle className="text-base">{beat.name}</CardTitle>
+                <CardDescription className="text-xs">
+                  {t('active.plannedStops')}
+                </CardDescription>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAddShop(true)}
+                className="h-8 shrink-0 gap-1 text-xs"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add shop
+              </Button>
+            </div>
+
+            <div className="mt-3 grid grid-cols-3 gap-2 rounded-md bg-muted/40 p-2.5 text-center text-xs">
+              <div>
+                <p className="text-muted-foreground text-[11px]">Total calls</p>
+                <p className="font-semibold text-sm tabular-nums">
+                  {doneCalls} / {beat.stops.length}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-[11px]">Productive today</p>
+                <p className="font-semibold text-sm text-emerald-700 tabular-nums">
+                  {totals.orders}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-[11px]">Past productive</p>
+                <p className="font-semibold text-sm tabular-nums">
+                  {productiveCalls} / {beat.stops.length}
+                </p>
+              </div>
+            </div>
           </CardHeader>
+
           <CardContent className="space-y-2">
             {beat.stops.map((stop, index) => {
               const shop = stop.retailerId ? retailers.get(stop.retailerId) : undefined;
               const town = towns.get(shop?.townId ?? stop.townId ?? '');
               const done = shop ? totals.visitedRetailerIds.has(shop.id) : false;
+              const history = shop?.callHistory;
+
               return (
-                <div key={stop.sequence} className="flex items-center gap-3 rounded-md border p-3">
+                <div
+                  key={`${stop.sequence}-${stop.retailerId ?? index}`}
+                  className="flex items-start gap-3 rounded-md border p-3"
+                >
                   <span
                     className={cn(
-                      'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+                      'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
                       done ? 'bg-emerald-600 text-white' : 'bg-muted',
                     )}
                   >
@@ -315,12 +396,45 @@ function ActiveDay({
                   </span>
                   <Link
                     href={shop ? `/app/visit/new?retailerId=${shop.id}` : '/app/visit/new'}
-                    className="min-w-0 flex-1"
+                    prefetch={false}
+                    className="min-w-0 flex-1 space-y-1"
                   >
-                    <p className="truncate text-sm font-medium">
-                      {shop?.shopName ?? town?.name ?? t('active.stop')}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <p className="truncate text-sm font-medium">
+                        {shop?.shopName ?? town?.name ?? t('active.stop')}
+                      </p>
+                      {done ? (
+                        <Badge variant="success" className="px-1.5 py-0 text-[10px]">
+                          Visited today
+                        </Badge>
+                      ) : history ? (
+                        history.isProductive ? (
+                          <Badge variant="success" className="px-1.5 py-0 text-[10px]">
+                            Productive call
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+                            No order
+                          </Badge>
+                        )
+                      ) : null}
+                    </div>
+
+                    <p className="text-muted-foreground truncate text-xs">
+                      {shop?.ownerName ? `${shop.ownerName} · ` : ''}
+                      {town?.name ?? '-'}
                     </p>
-                    <p className="text-muted-foreground truncate text-xs">{town?.name}</p>
+
+                    {history ? (
+                      <p className="text-[11px] text-muted-foreground tabular-nums">
+                        Last call: {formatDate(history.lastVisitAt)}
+                        {history.lastOrderAmount
+                          ? ` · Last order: ${formatINR(history.lastOrderAmount)}`
+                          : ''}
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground">New call · Not visited yet</p>
+                    )}
                   </Link>
                   {shop ? (
                     <a
@@ -328,7 +442,7 @@ function ActiveDay({
                       target="_blank"
                       rel="noreferrer"
                       aria-label={t('active.navigateTo', { name: shop.shopName })}
-                      className="flex h-10 w-10 items-center justify-center rounded-md border"
+                      className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-muted-foreground hover:text-foreground"
                     >
                       <Navigation className="h-4 w-4" />
                     </a>
@@ -337,6 +451,18 @@ function ActiveDay({
               );
             })}
           </CardContent>
+
+          {showAddShop && bootstrap ? (
+            <AddShopToRouteDialog
+              open={showAddShop}
+              onOpenChange={setShowAddShop}
+              beatId={beat.id}
+              beatName={beat.name}
+              currentRetailerIds={currentRetailerIds}
+              retailers={bootstrap.retailers}
+              towns={towns}
+            />
+          ) : null}
         </Card>
       ) : null}
 

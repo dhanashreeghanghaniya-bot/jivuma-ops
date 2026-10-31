@@ -67,6 +67,34 @@ export async function bootstrap(salesmanId: string): Promise<FieldBootstrap> {
     }),
   ]);
 
+  const retailerIds = retailers.map((r) => r.id);
+  const recentVisits =
+    retailerIds.length > 0
+      ? await prisma.visit.findMany({
+          where: {
+            salesmanId,
+            retailerId: { in: retailerIds },
+          },
+          orderBy: [{ retailerId: 'asc' }, { checkInAt: 'desc' }],
+          distinct: ['retailerId'],
+          select: {
+            retailerId: true,
+            checkInAt: true,
+            outcome: true,
+            noOrderReason: true,
+            order: {
+              select: {
+                orderNumber: true,
+                totalAmount: true,
+                createdAt: true,
+              },
+            },
+          },
+        })
+      : [];
+
+  const visitMap = new Map(recentVisits.map((v) => [v.retailerId!, v]));
+
   return {
     generatedAt: new Date().toISOString(),
     salesman: { id: user.id, name: user.name, hqTown: user.hqTown },
@@ -79,19 +107,32 @@ export async function bootstrap(salesmanId: string): Promise<FieldBootstrap> {
       townId: d.townId,
       coveredTownIds: d.coveredTowns.map((t) => t.id),
     })),
-    retailers: retailers.map((r) => ({
-      id: r.id,
-      shopName: r.shopName,
-      ownerName: r.ownerName,
-      phone: r.phone,
-      address: r.address,
-      townId: r.townId,
-      lat: r.lat.toNumber(),
-      lng: r.lng.toNumber(),
-      category: r.category,
-      distributorId: r.distributorId,
-      isVerified: r.isVerified,
-    })),
+    retailers: retailers.map((r) => {
+      const v = visitMap.get(r.id);
+      return {
+        id: r.id,
+        shopName: r.shopName,
+        ownerName: r.ownerName,
+        phone: r.phone,
+        address: r.address,
+        townId: r.townId,
+        lat: r.lat.toNumber(),
+        lng: r.lng.toNumber(),
+        category: r.category,
+        distributorId: r.distributorId,
+        isVerified: r.isVerified,
+        callHistory: v
+          ? {
+              lastVisitAt: v.checkInAt.toISOString(),
+              lastVisitOutcome: v.outcome,
+              lastOrderAt: v.order?.createdAt.toISOString() ?? null,
+              lastOrderAmount: v.order ? v.order.totalAmount.toNumber() : null,
+              lastOrderNumber: v.order?.orderNumber ?? null,
+              isProductive: v.outcome === 'ORDER_TAKEN',
+            }
+          : undefined,
+      };
+    }),
     products: products.map((p) => ({
       id: p.id,
       name: p.name,
@@ -218,4 +259,53 @@ export async function createLead(
   }
 
   return prisma.lead.findUniqueOrThrow({ where: { id: leadId }, select });
+}
+
+export async function addBeatStop(salesmanId: string, beatId: string, retailerId: string) {
+  const beat = await prisma.beat.findFirst({
+    where: { id: beatId, salesmanId, isActive: true, deletedAt: null },
+    include: { stops: { orderBy: { sequence: 'asc' } } },
+  });
+  if (!beat) throw ApiException.notFound('Route not found or not assigned to you');
+
+  const retailer = await prisma.retailer.findFirst({
+    where: { id: retailerId, deletedAt: null },
+  });
+  if (!retailer) throw ApiException.notFound('Shop not found');
+
+  const existing = beat.stops.find((s) => s.retailerId === retailerId);
+  if (existing) {
+    return {
+      id: beat.id,
+      name: beat.name,
+      dayOfWeek: beat.dayOfWeek,
+      stops: beat.stops.map((s) => ({
+        sequence: s.sequence,
+        townId: s.townId,
+        retailerId: s.retailerId,
+      })),
+    };
+  }
+
+  const maxSeq = beat.stops.reduce((max, s) => Math.max(max, s.sequence), 0);
+  const newStop = await prisma.beatStop.create({
+    data: {
+      beatId: beat.id,
+      retailerId: retailer.id,
+      townId: retailer.townId,
+      sequence: maxSeq + 1,
+    },
+  });
+
+  const updatedStops = [...beat.stops, newStop].sort((a, b) => a.sequence - b.sequence);
+  return {
+    id: beat.id,
+    name: beat.name,
+    dayOfWeek: beat.dayOfWeek,
+    stops: updatedStops.map((s) => ({
+      sequence: s.sequence,
+      townId: s.townId,
+      retailerId: s.retailerId,
+    })),
+  };
 }
