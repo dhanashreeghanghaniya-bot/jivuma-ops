@@ -130,6 +130,23 @@ export type ListOrdersQuery = z.infer<typeof listOrdersQuerySchema>;
 
 const money = z.coerce.number().min(0, 'Cannot be negative').max(9_999_999);
 
+const marginPct = z.coerce.number().min(0, 'Cannot be negative').max(99.99, 'Must be below 100%');
+
+const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
+
+/** Each margin comes off the price above it: MRP, then retailer, distributor, SS. */
+export function tierPrices(p: {
+  mrp: number;
+  retailMargin: number;
+  distributorMargin: number;
+  ssMargin: number;
+}) {
+  const retailerPrice = roundMoney(p.mrp * (1 - p.retailMargin / 100));
+  const distributorPrice = roundMoney(retailerPrice * (1 - p.distributorMargin / 100));
+  const ssPrice = roundMoney(distributorPrice * (1 - p.ssMargin / 100));
+  return { retailerPrice, distributorPrice, ssPrice };
+}
+
 export const createProductSchema = z
   .object({
     name: z.string().trim().min(2, 'Name is required').max(120),
@@ -142,23 +159,10 @@ export const createProductSchema = z
     packSize: z.string().trim().min(1, 'Pack size is required').max(40),
     unitsPerCase: z.coerce.number().int().min(1).max(1000),
     mrp: money,
-    ssPrice: money,
-    distributorPrice: money,
-    retailerPrice: money,
+    retailMargin: marginPct,
+    distributorMargin: marginPct,
+    ssMargin: marginPct,
     isActive: z.boolean().default(true),
-  })
-  // Each step down the chain must leave the next one a margin, and MRP caps it all.
-  .refine((p) => p.ssPrice <= p.distributorPrice, {
-    path: ['distributorPrice'],
-    message: 'Distributor price cannot be below the SS price',
-  })
-  .refine((p) => p.distributorPrice <= p.retailerPrice, {
-    path: ['retailerPrice'],
-    message: 'Retailer price cannot be below the distributor price',
-  })
-  .refine((p) => p.retailerPrice <= p.mrp, {
-    path: ['mrp'],
-    message: 'MRP cannot be below the retailer price',
   });
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 
@@ -172,3 +176,14 @@ export const listProductsQuerySchema = z.object({
     .optional(),
 });
 export type ListProductsQuery = z.infer<typeof listProductsQuerySchema>;
+
+/** Admin override of order line rates; allowed until the order is dispatched. */
+export const RATE_EDITABLE_STATUSES: OrderStatus[] = [OrderStatus.PLACED, OrderStatus.CONFIRMED];
+
+export const updateOrderRatesSchema = z.object({
+  items: z
+    .array(z.object({ id: idSchema, rate: money }))
+    .min(1)
+    .max(100),
+});
+export type UpdateOrderRatesInput = z.infer<typeof updateOrderRatesSchema>;

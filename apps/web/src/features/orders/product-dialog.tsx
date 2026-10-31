@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { z } from 'zod';
-import { createProductSchema, type ProductItem } from '@juma/shared';
+import { createProductSchema, tierPrices, type ProductItem } from '@juma/shared';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -19,6 +19,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ApiRequestError } from '@/lib/api-client';
+import { formatINR } from '@/lib/format';
 import { FieldError } from '@/features/partners/form-fields';
 import { useSaveProduct } from './api';
 
@@ -31,9 +32,9 @@ const empty: FormValues = {
   packSize: '',
   unitsPerCase: 24,
   mrp: 0,
-  ssPrice: 0,
-  distributorPrice: 0,
-  retailerPrice: 0,
+  retailMargin: 0,
+  distributorMargin: 0,
+  ssMargin: 0,
   isActive: true,
 };
 
@@ -44,17 +45,16 @@ const fromItem = (p: ProductItem): FormValues => ({
   packSize: p.packSize,
   unitsPerCase: p.unitsPerCase,
   mrp: Number(p.mrp),
-  ssPrice: Number(p.ssPrice),
-  distributorPrice: Number(p.distributorPrice),
-  retailerPrice: Number(p.retailerPrice),
+  retailMargin: Number(p.retailMargin),
+  distributorMargin: Number(p.distributorMargin),
+  ssMargin: Number(p.ssMargin),
   isActive: p.isActive,
 });
 
-const PRICES = [
-  ['ssPrice', 'SS price'],
-  ['distributorPrice', 'Distributor price'],
-  ['retailerPrice', 'Retailer price'],
-  ['mrp', 'MRP'],
+const MARGINS = [
+  ['retailMargin', 'Retail margin'],
+  ['distributorMargin', 'Distributor margin'],
+  ['ssMargin', 'SS margin'],
 ] as const;
 
 export function ProductDialog({
@@ -72,8 +72,22 @@ export function ProductDialog({
     handleSubmit,
     reset,
     setError,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(createProductSchema), defaultValues: empty });
+
+  const [mrp, retailMargin, distributorMargin, ssMargin] = watch([
+    'mrp',
+    'retailMargin',
+    'distributorMargin',
+    'ssMargin',
+  ]);
+  const prices = tierPrices({
+    mrp: Number(mrp) || 0,
+    retailMargin: Number(retailMargin) || 0,
+    distributorMargin: Number(distributorMargin) || 0,
+    ssMargin: Number(ssMargin) || 0,
+  });
 
   useEffect(() => {
     if (open) reset(editing ? fromItem(editing) : empty);
@@ -102,8 +116,8 @@ export function ProductDialog({
         <DialogHeader>
           <DialogTitle>{editing ? `Edit ${editing.name}` : 'Add product'}</DialogTitle>
           <DialogDescription>
-            Prices are per unit. Changing a price affects new orders only; existing orders keep the
-            rate they were placed at.
+            Prices are per unit and worked out from the MRP. Each margin comes off the price above
+            it. Changes affect new orders only; existing orders keep the rate they were placed at.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -137,13 +151,22 @@ export function ProductDialog({
             <Input id="p-upc" inputMode="numeric" {...register('unitsPerCase')} />
             <FieldError message={errors.unitsPerCase?.message} />
           </div>
-          {PRICES.map(([key, label]) => (
+          <div className="space-y-1.5">
+            <Label htmlFor="p-mrp">MRP incl. GST (₹)</Label>
+            <Input id="p-mrp" inputMode="decimal" {...register('mrp')} />
+            <FieldError message={errors.mrp?.message} />
+          </div>
+          {MARGINS.map(([key, label]) => (
             <div key={key} className="space-y-1.5">
-              <Label htmlFor={`p-${key}`}>{label} (₹)</Label>
+              <Label htmlFor={`p-${key}`}>{label} (%)</Label>
               <Input id={`p-${key}`} inputMode="decimal" {...register(key)} />
               <FieldError message={errors[key]?.message} />
             </div>
           ))}
+          <div className="bg-muted rounded-md p-3 text-sm tabular-nums sm:col-span-2">
+            Retailer {formatINR(prices.retailerPrice, true)} · Distributor{' '}
+            {formatINR(prices.distributorPrice, true)} · SS {formatINR(prices.ssPrice, true)}
+          </div>
           <label className="flex items-center gap-2 text-sm sm:col-span-2">
             <input type="checkbox" className="accent-primary h-4 w-4" {...register('isActive')} />
             Active (inactive products are hidden from order forms)

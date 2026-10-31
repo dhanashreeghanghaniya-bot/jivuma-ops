@@ -5,7 +5,12 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Loader2, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
-import { OrderStatus, type OrderDetail, type OrderParty } from '@juma/shared';
+import {
+  OrderStatus,
+  RATE_EDITABLE_STATUSES,
+  type OrderDetail,
+  type OrderParty,
+} from '@juma/shared';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -22,7 +27,7 @@ import { ErrorState, LoadingState } from '@/components/data-states';
 import { ApiRequestError } from '@/lib/api-client';
 import { formatDate, formatDateTime, formatINR } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { useChangeOrderStatus, useOrder } from '@/features/orders/api';
+import { useChangeOrderStatus, useOrder, useUpdateOrderRates } from '@/features/orders/api';
 import {
   LEVEL_LABELS,
   STATUS_ACTIONS,
@@ -64,6 +69,49 @@ function PartyCard({ label, party }: { label: string; party: OrderParty }) {
           {party.district ? `, ${party.district.name}` : ''}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+function PriceEditor({ order }: { order: OrderDetail }) {
+  const update = useUpdateOrderRates();
+  const [rates, setRates] = useState<Record<string, string>>(() =>
+    Object.fromEntries(order.items.map((i) => [i.id, Number(i.rate).toFixed(2)])),
+  );
+
+  const save = async () => {
+    try {
+      const items = order.items.map((i) => ({ id: i.id, rate: Number(rates[i.id]) }));
+      await update.mutateAsync({ id: order.id, input: { items } });
+      toast.success(`${order.orderNumber} prices updated`);
+    } catch (err) {
+      toast.error(err instanceof ApiRequestError ? err.message : 'Could not update the prices');
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-muted-foreground text-sm">
+        Applies to this order only, per unit. Standard product prices stay as they are.
+      </p>
+      {order.items.map((item) => (
+        <div key={item.id} className="flex items-center justify-between gap-3">
+          <label htmlFor={`rate-${item.id}`} className="min-w-0 truncate text-sm">
+            {item.product.name}
+          </label>
+          <Input
+            id={`rate-${item.id}`}
+            inputMode="decimal"
+            className="w-28 text-right tabular-nums"
+            value={rates[item.id] ?? ''}
+            onChange={(e) => setRates((r) => ({ ...r, [item.id]: e.target.value }))}
+          />
+        </div>
+      ))}
+      <Button disabled={update.isPending} onClick={() => void save()}>
+        {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+        Save prices
+      </Button>
     </div>
   );
 }
@@ -265,6 +313,16 @@ export default function OrderDetailPage() {
         </Card>
 
         <div className="space-y-6">
+          {RATE_EDITABLE_STATUSES.includes(o.status) ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Change prices</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PriceEditor key={o.totalAmount} order={o} />
+              </CardContent>
+            </Card>
+          ) : null}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Update status</CardTitle>

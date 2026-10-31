@@ -1,6 +1,8 @@
 import { OrderLevel, OrderStatus, PartnerStatus, PartyType, Prisma } from '@prisma/client';
 import {
   PRICE_TIER,
+  RATE_EDITABLE_STATUSES,
+  type UpdateOrderRatesInput,
   allowedNextStatuses,
   type ChangeOrderStatusInput,
   type CreateOrderInput,
@@ -374,6 +376,69 @@ export async function changeStatus(
     entityId: id,
     before: { status: order.status },
     after: { status: input.status, note: input.note },
+  });
+  return getById(id, { userId: actorId, isAdmin: true });
+}
+
+/** Admin price change for one order; the product's standard prices stay as they are. */
+export async function updateRates(
+  id: string,
+  input: UpdateOrderRatesInput,
+  actorId: string,
+): Promise<OrderDetail> {
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: { items: { include: { product: { select: { unitsPerCase: true } } } } },
+  });
+  if (!order) throw ApiException.notFound('Order not found');
+  if (!RATE_EDITABLE_STATUSES.includes(order.status)) {
+    throw ApiException.badRequest('Prices can only be changed before the order is dispatched');
+  }
+
+  const rates = new Map(input.items.map((i) => [i.id, new Prisma.Decimal(i.rate)]));
+  if ([...rates.keys()].some((itemId) => !order.items.some((i) => i.id === itemId))) {
+    throw ApiException.badRequest('One or more lines are not on this order');
+  }
+
+  let total = new Prisma.Decimal(0);
+  const lines = order.items.map((item) => {
+    const rate = rates.get(item.id) ?? item.rate;
+    const amount = rate
+      .mul(item.qtyCases * item.product.unitsPerCase + item.qtyUnits)
+      .toDecimalPlaces(2);
+    total = total.add(amount);
+    return { id: item.id, rate, amount };
+  });
+
+  await prisma.$transaction(async (tx) => {
+    // Guarded on the status we read, so a dispatch at the same moment wins cleanly.
+    const moved = await tx.order.updateMany({
+      where: { id, status: order.status },
+      data: { totalAmount: total },
+    });
+    if (moved.count === 0)
+      throw ApiException.conflict('Someone else just changed this order. Reload it.');
+    for (const line of lines) {
+      await tx.orderItem.update({
+        where: { id: line.id },
+        data: { rate: line.rate, amount: line.amount },
+      });
+    }
+  });
+
+  await writeAuditLog({
+    userId: actorId,
+    action: 'UPDATE',
+    entity: 'Order',
+    entityId: id,
+    before: {
+      totalAmount: order.totalAmount.toFixed(2),
+      rates: order.items.map((i) => ({ id: i.id, rate: i.rate.toFixed(2) })),
+    },
+    after: {
+      totalAmount: total.toFixed(2),
+      rates: lines.map((l) => ({ id: l.id, rate: l.rate.toFixed(2) })),
+    },
   });
   return getById(id, { userId: actorId, isAdmin: true });
 }

@@ -5,6 +5,7 @@ import {
   changeOrderStatusSchema,
   createOrderSchema,
   createProductSchema,
+  tierPrices,
 } from '@juma/shared';
 import { changeStatus, priceLines } from './orders.service';
 
@@ -92,24 +93,26 @@ describe('createProductSchema', () => {
     category: 'Namkeen',
     packSize: '150 g',
     unitsPerCase: 30,
-    mrp: 40,
-    ssPrice: 26.5,
-    distributorPrice: 28.5,
-    retailerPrice: 32,
+    mrp: 100,
+    retailMargin: 20,
+    distributorMargin: 8,
+    ssMargin: 5,
   };
 
   it('upper-cases the SKU', () => {
     expect(createProductSchema.parse(base).sku).toBe('JF-ABJ-150');
   });
 
-  it('keeps every step down the chain at or above the one before', () => {
-    const msg = (over: object) => {
-      const r = createProductSchema.safeParse({ ...base, ...over });
-      return r.success ? null : r.error.issues[0]?.message;
-    };
-    expect(msg({ distributorPrice: 25 })).toBe('Distributor price cannot be below the SS price');
-    expect(msg({ retailerPrice: 28 })).toBe('Retailer price cannot be below the distributor price');
-    expect(msg({ mrp: 30 })).toBe('MRP cannot be below the retailer price');
+  it('rejects a margin of 100% or more', () => {
+    expect(createProductSchema.safeParse({ ...base, ssMargin: 100 }).success).toBe(false);
+  });
+
+  it('takes each margin off the price above it', () => {
+    expect(tierPrices(base)).toEqual({
+      retailerPrice: 80,
+      distributorPrice: 73.6,
+      ssPrice: 69.92,
+    });
   });
 });
 

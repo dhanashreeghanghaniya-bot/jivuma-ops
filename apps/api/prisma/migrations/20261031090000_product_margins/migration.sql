@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Product" ADD COLUMN     "distributorMargin" DECIMAL(5,2) NOT NULL DEFAULT 0,
+ADD COLUMN     "retailMargin" DECIMAL(5,2) NOT NULL DEFAULT 0,
+ADD COLUMN     "ssMargin" DECIMAL(5,2) NOT NULL DEFAULT 0;

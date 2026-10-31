@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   ChangeOrderStatusInput,
   CreateOrderInput,
+  UpdateOrderRatesInput,
   CreateProductInput,
   OrderDetail,
   OrderLevel,
@@ -73,6 +74,15 @@ export function useChangeOrderStatus() {
   return useMutation({
     mutationFn: async ({ id, input }: { id: string; input: ChangeOrderStatusInput }) =>
       (await api.post<OrderDetail>(`/orders/${id}/status`, input)).data,
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateOrderRates() {
+  const invalidate = useInvalidateOrders();
+  return useMutation({
+    mutationFn: async ({ id, input }: { id: string; input: UpdateOrderRatesInput }) =>
+      (await api.post<OrderDetail>(`/orders/${id}/rates`, input)).data,
     onSuccess: invalidate,
   });
 }

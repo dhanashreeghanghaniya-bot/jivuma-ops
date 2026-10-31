@@ -12,10 +12,12 @@ import {
   createProductSchema,
   listOrdersQuerySchema,
   listProductsQuerySchema,
+  updateOrderRatesSchema,
   updateProductSchema,
   type ChangeOrderStatusInput,
   type CreateOrderInput,
   type CreateProductInput,
+  type UpdateOrderRatesInput,
   type UpdateProductInput,
 } from '@juma/shared';
 import { sendOk } from '../../lib/http';
@@ -64,6 +66,21 @@ ordersRouter.post(
   validateBody(createOrderSchema),
   wrap(async (req, res) =>
     sendOk(res, await orders.create(req.body as CreateOrderInput, req.auth!.userId), null, 201),
+  ),
+);
+ordersRouter.post(
+  '/:id/rates',
+  requireAdmin,
+  validateBody(updateOrderRatesSchema),
+  wrap(async (req, res) =>
+    sendOk(
+      res,
+      await orders.updateRates(
+        req.params.id as string,
+        req.body as UpdateOrderRatesInput,
+        req.auth!.userId,
+      ),
+    ),
   ),
 );
 ordersRouter.post(

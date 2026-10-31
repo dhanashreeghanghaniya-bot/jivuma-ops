@@ -422,6 +422,9 @@ model Product {
   ssPrice          Decimal @db.Decimal(12, 2)
   distributorPrice Decimal @db.Decimal(12, 2)
   retailerPrice    Decimal @db.Decimal(12, 2)
+  retailMargin      Decimal @default(0) @db.Decimal(5, 2)
+  distributorMargin Decimal @default(0) @db.Decimal(5, 2)
+  ssMargin          Decimal @default(0) @db.Decimal(5, 2)
   isActive         Boolean @default(true)
 
   createdAt DateTime  @default(now())

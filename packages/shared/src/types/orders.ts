@@ -74,6 +74,9 @@ export interface ProductItem {
   ssPrice: string;
   distributorPrice: string;
   retailerPrice: string;
+  retailMargin: string;
+  distributorMargin: string;
+  ssMargin: string;
   isActive: boolean;
   orderCount: number;
 }

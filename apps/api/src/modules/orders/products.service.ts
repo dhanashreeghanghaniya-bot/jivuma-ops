@@ -1,9 +1,10 @@
 import { Prisma, type Product } from '@prisma/client';
-import type {
-  CreateProductInput,
-  ListProductsQuery,
-  ProductItem,
-  UpdateProductInput,
+import {
+  tierPrices,
+  type CreateProductInput,
+  type ListProductsQuery,
+  type ProductItem,
+  type UpdateProductInput,
 } from '@juma/shared';
 import { prisma } from '../../lib/prisma';
 import { ApiException } from '../../lib/http';
@@ -21,6 +22,9 @@ function toItem(p: Product & { _count: { orderItems: number } }): ProductItem {
     ssPrice: p.ssPrice.toFixed(2),
     distributorPrice: p.distributorPrice.toFixed(2),
     retailerPrice: p.retailerPrice.toFixed(2),
+    retailMargin: p.retailMargin.toFixed(2),
+    distributorMargin: p.distributorMargin.toFixed(2),
+    ssMargin: p.ssMargin.toFixed(2),
     isActive: p.isActive,
     orderCount: p._count.orderItems,
   };
@@ -39,6 +43,7 @@ export async function list(q: ListProductsQuery, isAdmin: boolean): Promise<Prod
 }
 
 function data(input: CreateProductInput) {
+  const prices = tierPrices(input);
   return {
     name: input.name,
     sku: input.sku,
@@ -46,9 +51,12 @@ function data(input: CreateProductInput) {
     packSize: input.packSize,
     unitsPerCase: input.unitsPerCase,
     mrp: new Prisma.Decimal(input.mrp),
-    ssPrice: new Prisma.Decimal(input.ssPrice),
-    distributorPrice: new Prisma.Decimal(input.distributorPrice),
-    retailerPrice: new Prisma.Decimal(input.retailerPrice),
+    ssPrice: new Prisma.Decimal(prices.ssPrice),
+    distributorPrice: new Prisma.Decimal(prices.distributorPrice),
+    retailerPrice: new Prisma.Decimal(prices.retailerPrice),
+    retailMargin: new Prisma.Decimal(input.retailMargin),
+    distributorMargin: new Prisma.Decimal(input.distributorMargin),
+    ssMargin: new Prisma.Decimal(input.ssMargin),
     isActive: input.isActive,
   };
 }
